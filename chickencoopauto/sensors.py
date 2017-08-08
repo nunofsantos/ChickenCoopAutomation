@@ -4,12 +4,17 @@ import Adafruit_DHT as DHT
 import RPi.GPIO as GPIO
 from w1thermsensor import W1ThermSensor
 
+from notifications import Notification, NotifierMixin
+
 
 log = logging.getLogger(__name__)
 
 
-class Sensor(object):
+class Sensor(NotifierMixin):
+    notifications = []
+
     def __init__(self, coop, name):
+        super(Sensor, self).__init__(self.notifications)
         self.coop = coop
         self.name = name
 
@@ -18,7 +23,16 @@ class Sensor(object):
 
 
 class SwitchSensor(Sensor):
+    notification_switch_sensor_failed_wait = Notification(
+        'switch sensor failed wait',
+        '{name} FAILED to wait to {state}',
+        auto_clear=True
+    )
+
     def __init__(self, coop, name, port, timeout=30000):
+        self.notifications = [
+            self.notification_switch_sensor_failed_wait,
+        ]
         super(SwitchSensor, self).__init__(coop, name)
         self.port = port
         self.timeout = timeout
@@ -43,7 +57,7 @@ class SwitchSensor(Sensor):
         log.info('Waiting...')
         result = GPIO.wait_for_edge(self.port, detect, timeout=self.timeout)
         if result is None:
-            log.error('{} FAILED to wait to {}'.format(self.name, 'OPEN' if state else 'CLOSE'))
+            log.error(self.notification_switch_sensor_failed_wait, name=self.name, state='OPEN' if state else 'CLOSE')
             return False
         log.info('Done!')
         self.check()
@@ -52,11 +66,35 @@ class SwitchSensor(Sensor):
 
 class WaterLevelSensor(SwitchSensor):
     def __init__(self, coop, name, port):
+        self.notifications = []
         super(WaterLevelSensor, self).__init__(coop, name, port)
 
 
 class AmbientTempHumiSensor(Sensor):
+    notification_ambient_temp_high = Notification(
+        'ambient temp high',
+        'Ambient temperature {temp:.1f} is higher than {max:.1f} maximum!'
+    )
+    notification_ambient_temp_low = Notification(
+        'ambient temp low',
+        'Ambient temperature {temp:.1f} is lower than {min:.1f} minimum!'
+    )
+    notification_ambient_humi_high = Notification(
+        'ambient humi high',
+        'Ambient humidity {humi:.1f} is higher than {max:.1f} maximum!'
+    )
+    notification_ambient_humi_low = Notification(
+        'ambient humi low',
+        'Ambient humidity {humi:.1f} is lower than {min:.1f} minimum!'
+    )
+
     def __init__(self, coop, name, sensor, port, alert_temp, alert_humi):
+        self.notifications = [
+            self.notification_ambient_temp_high,
+            self.notification_ambient_temp_low,
+            self.notification_ambient_humi_high,
+            self.notification_ambient_humi_low,
+        ]
         super(AmbientTempHumiSensor, self).__init__(coop, name)
         self.sensor = sensor
         self.port = port
@@ -79,19 +117,25 @@ class AmbientTempHumiSensor(Sensor):
 
     def check_alert_temp(self, temp):
         if temp < self.alert_temp[0]:
-            logging.warning('ALERT: Ambient temperature {:.1f}'
-                            ' is lower than {:.1f} minimum!'.format(temp, self.alert_temp[0]))
+            self.clear_notification(self.notification_ambient_temp_high)
+            self.send_notification(self.notification_ambient_temp_low, temp=temp, min=self.alert_temp[0])
         elif temp > self.alert_temp[1]:
-            log.warning('ALERT: Ambient temperature {:.1f}'
-                        ' is higher than {:.1f} maximum!'.format(temp, self.alert_temp[1]))
+            self.clear_notification(self.notification_ambient_temp_low)
+            self.send_notification(self.notification_ambient_temp_high, temp=temp, max=self.alert_temp[1])
+        else:
+            self.clear_notification(self.notification_ambient_temp_high)
+            self.clear_notification(self.notification_ambient_temp_low)
 
     def check_alert_humi(self, humi):
         if humi < self.alert_humi[0]:
-            log.warning('ALERT: Ambient humidity {:.1f}'
-                        ' is lower than {:.1f} minimum!'.format(humi, self.alert_humi[0]))
+            self.clear_notification(self.notification_ambient_humi_high)
+            self.send_notification(self.notification_ambient_humi_low, humi=humi, min=self.alert_humi[0])
         elif humi > self.alert_humi[1]:
-            log.warning('ALERT: Ambient humidity {:.1f}'
-                        ' is higher than {:.1f} maximum!'.format(humi, self.alert_humi[1]))
+            self.clear_notification(self.notification_ambient_humi_low)
+            self.send_notification(self.notification_ambient_humi_high, humi=humi, max=self.alert_humi[1])
+        else:
+            self.clear_notification(self.notification_ambient_humi_high)
+            self.clear_notification(self.notification_ambient_humi_low)
 
     def set_alert_temp(self, alert_temp):
         self.alert_temp = alert_temp
