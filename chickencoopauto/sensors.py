@@ -37,6 +37,7 @@ class SwitchSensor(Sensor):
         super(SwitchSensor, self).__init__(coop, name)
         self.port = port
         self.timeout = timeout
+        GPIO.setmode(GPIO.BCM)
         GPIO.setup(port, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
     def check(self):

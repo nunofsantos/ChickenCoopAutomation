@@ -2,7 +2,7 @@
 # relays have negative logic
 ON = False
 OFF = True
-
+CHECK_DELAY = 5
 LAT = XX.XXXXXX
 LON = -YY.YYYYYY
 

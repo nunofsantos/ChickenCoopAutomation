@@ -15,6 +15,7 @@ class Relay(object):
         self.port = port
         self._initial_state = initial_state
         self._state = initial_state
+        GPIO.setmode(GPIO.BCM)
         GPIO.setup(port, GPIO.OUT, initial=initial_state)
 
     @property

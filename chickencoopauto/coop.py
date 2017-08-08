@@ -1,5 +1,7 @@
 import ConfigParser
 import logging
+from threading import Thread
+from time import sleep
 
 import Adafruit_DHT as DHT
 import RPi.GPIO as GPIO
@@ -12,8 +14,9 @@ import utils
 log = logging.getLogger(__name__)
 
 
-class Coop(object):
+class Coop(Thread):
     def __init__(self):
+        super(Coop, self).__init__()
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
         self.config = self._read_config()
@@ -29,6 +32,7 @@ class Coop(object):
         main_options = {
             'ON': parser.getboolean('Main', 'ON'),
             'OFF': parser.getboolean('Main', 'OFF'),
+            'CHECK_DELAY': parser.getint('Main', 'CHECK_DELAY'),
             'LAT': parser.getfloat('Main', 'LAT'),
             'LON': parser.getfloat('Main', 'LON'),
         }
@@ -159,7 +163,34 @@ class Coop(object):
             manual_mode=False
         )
 
+    def run(self):
+        while True:
+            # ambient temperature
+            self.ambient_temp_humi_sensor.check()
+
+            # water temperature
+            self.water_temp_sensor.check()
+
+            # water level
+            self.water_level_sensor_top.check()
+            self.water_level_sensor_bottom.check()
+
+            # light
+            self.light.check()
+
+            #############################
+            # door switches
+            # self.door_open_sensor.check()
+            # self.door_closed_sensor.check()
+            #############################
+
+            # door
+            self.door.check()
+
+            sleep(self.config['Main']['CHECK_DELAY'])
+
     def shutdown(self):
+        log.info('Resetting relays...')
         for relay in self.relay_module.values():
             relay.reset()
         GPIO.cleanup()

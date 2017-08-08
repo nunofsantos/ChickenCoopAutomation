@@ -2,6 +2,8 @@ import arrow
 import json
 import logging
 import requests
+from threading import Thread
+from time import sleep
 
 
 log = logging.getLogger(__name__)
@@ -58,3 +60,10 @@ class SunriseSunset(object):
 
     def set_extra_min_sunset(self, extra_min):
         self.extra_min_sunset = extra_min
+
+
+class DummyThread(Thread):
+    def run(self):
+        while True:
+            print '..........'
+            sleep(10)
