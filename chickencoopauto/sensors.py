@@ -25,14 +25,15 @@ class Sensor(NotifierMixin):
 class SwitchSensor(Sensor):
     notification_switch_sensor_failed_wait = Notification(
         'switch sensor failed wait',
+        Notification.ERROR,
         '{name} FAILED to wait to {state}',
         auto_clear=True
     )
 
     def __init__(self, coop, name, port, timeout=30000):
-        self.notifications = [
+        self.notifications.extend([
             self.notification_switch_sensor_failed_wait,
-        ]
+        ])
         super(SwitchSensor, self).__init__(coop, name)
         self.port = port
         self.timeout = timeout
@@ -57,7 +58,8 @@ class SwitchSensor(Sensor):
         log.info('Waiting...')
         result = GPIO.wait_for_edge(self.port, detect, timeout=self.timeout)
         if result is None:
-            log.error(self.notification_switch_sensor_failed_wait, name=self.name, state='OPEN' if state else 'CLOSE')
+            self.send_notification(self.notification_switch_sensor_failed_wait,
+                                   name=self.name, state='OPEN' if state else 'CLOSE')
             return False
         log.info('Done!')
         self.check()
@@ -65,26 +67,46 @@ class SwitchSensor(Sensor):
 
 
 class WaterLevelSensor(SwitchSensor):
+    notification_water_level_low = Notification(
+        'water level low',
+        Notification.WARN,
+        'Water level below {name} level'
+    )
+
     def __init__(self, coop, name, port):
-        self.notifications = []
+        self.notifications = [
+            self.notification_water_level_low
+        ]
         super(WaterLevelSensor, self).__init__(coop, name, port)
+
+    def check(self):
+        state = super(WaterLevelSensor, self).check()
+        if not state:
+            self.send_notification(self.notification_water_level_low, name=self.name)
+        else:
+            self.clear_notification(self.notification_water_level_low)
+        return state
 
 
 class AmbientTempHumiSensor(Sensor):
     notification_ambient_temp_high = Notification(
         'ambient temp high',
+        Notification.WARN,
         'Ambient temperature {temp:.1f} is higher than {max:.1f} maximum!'
     )
     notification_ambient_temp_low = Notification(
         'ambient temp low',
+        Notification.WARN,
         'Ambient temperature {temp:.1f} is lower than {min:.1f} minimum!'
     )
     notification_ambient_humi_high = Notification(
         'ambient humi high',
+        Notification.WARN,
         'Ambient humidity {humi:.1f} is higher than {max:.1f} maximum!'
     )
     notification_ambient_humi_low = Notification(
         'ambient humi low',
+        Notification.WARN,
         'Ambient humidity {humi:.1f} is lower than {min:.1f} minimum!'
     )
 

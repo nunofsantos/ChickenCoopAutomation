@@ -5,8 +5,19 @@ log = logging.getLogger(__name__)
 
 
 class Notification(object):
-    def __init__(self, type, message, single=True, auto_clear=False):
+    INFO = 0
+    WARN = 5
+    ERROR = 10
+
+    severity_levels = {
+        INFO: 'INFO',
+        WARN: 'WARN',
+        ERROR: 'ERROR',
+    }
+
+    def __init__(self, type, severity, message, single=True, auto_clear=False):
         self.type = type
+        self.severity = severity
         self.message = message
         self.single = single
         self.auto_clear = auto_clear
@@ -31,4 +42,6 @@ class NotifierMixin(object):
             self.notification_sent.pop(notification.type, None)
 
     def _send(self, notification, message):
-        log.warning('Notification ({}): {}'.format(notification.type, message))
+        log.warning('[{}] {}: {}'.format(notification.severity_levels[notification.severity],
+                                         notification.type,
+                                         message))

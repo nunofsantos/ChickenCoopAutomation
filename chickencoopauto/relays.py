@@ -38,10 +38,12 @@ class Relay(object):
 class RelayOperatedObject(NotifierMixin):
     notification_manual_mode = Notification(
         'manual mode',
+        Notification.WARN,
         '{name} set to MANUAL mode'
     )
     notification_auto_mode = Notification(
         'automatic mode',
+        Notification.INFO,
         '{name} set to automatic mode',
         auto_clear=True
     )
@@ -101,11 +103,13 @@ class RelayOperatedObject(NotifierMixin):
 class WaterHeater(RelayOperatedObject):
     notification_water_heater_on = Notification(
         'water heater on',
+        Notification.INFO,
         'Water temp {temp:.1f} is below {min:.1f} minimum, turning on heater!'
     )
     notification_water_heater_off = Notification(
         'water heater off',
-        'ACTION: Water temp {temp:.1f} is above {max:.1f} maximum, turning off heater!',
+        Notification.INFO,
+        'Water temp {temp:.1f} is above {max:.1f} maximum, turning off heater.',
         auto_clear=True
     )
 
@@ -147,10 +151,12 @@ class WaterHeater(RelayOperatedObject):
 class Light(RelayOperatedObject):
     notification_light_on = Notification(
         'light on',
+        Notification.INFO,
         'Turning ON light'
     )
     notification_light_off = Notification(
         'light off',
+        Notification.INFO,
         'Turning OFF light',
         auto_clear=True
     )
@@ -178,32 +184,39 @@ class Light(RelayOperatedObject):
 class Door(RelayOperatedObject):
     notification_door_opening_sunrise = Notification(
         'door opening',
+        Notification.INFO,
         'Door was closed, opening after sunrise',
         auto_clear=True
     )
     notification_door_closing_sunset = Notification(
         'door closing',
+        Notification.INFO,
         'Door was open, closing after sunset',
         auto_clear=True
     )
     notification_door_sensor_invalid_state = Notification(
         'door sensor invalid',
+        Notification.ERROR,
         'Door sensors are in invalid state!'
     )
     notification_door_manual_mode_closed_day = Notification(
         'door manual mode closed day',
+        Notification.WARN,
         'Door is in MANUAL mode, and is closed during the day!'
     )
     notification_door_manual_mode_open_night = Notification(
         'door manual mode open night',
+        Notification.WARN,
         'Door is in MANUAL mode, and is open during the night!'
     )
     notification_door_failed_open = Notification(
         'door failed open',
+        Notification.ERROR,
         'Door FAILED to open'
     )
     notification_door_failed_close = Notification(
         'door failed close',
+        Notification.ERROR,
         'Door FAILED to close'
     )
 
