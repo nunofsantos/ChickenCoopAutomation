@@ -280,9 +280,11 @@ class Door(RelayOperatedObject):
         closed_sensor_state = self.closed_sensor.check()
         if open_sensor_state and not closed_sensor_state:
             self.clear_notification(self.notification_door_sensor_invalid_state)
+            self.clear_notification(self.notification_door_failed_open)
             return self.OPEN
         elif closed_sensor_state and not open_sensor_state:
             self.clear_notification(self.notification_door_sensor_invalid_state)
+            self.clear_notification(self.notification_door_failed_close)
             return self.CLOSED
         else:
             self.send_notification(self.notification_door_sensor_invalid_state)

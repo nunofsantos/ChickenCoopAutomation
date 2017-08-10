@@ -1,5 +1,6 @@
 import ConfigParser
 import logging
+import os.path
 import smtplib
 from threading import Thread
 from time import sleep
@@ -18,20 +19,22 @@ log = logging.getLogger(__name__)
 
 
 class Coop(Thread):
-    def __init__(self):
+    def __init__(self, config_ini='config.ini'):
         self.notifier_manager = notifications.NotifierManager()
         super(Coop, self).__init__()
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
-        self.config = self._read_config()
+        self.config = self._read_config(config_ini)
         self.ON = self.config['Main']['ON']
         self.OFF = self.config['Main']['OFF']
         self._create_objects()
 
     @staticmethod
-    def _read_config():
+    def _read_config(config_ini):
+        if not os.path.isfile(config_ini):
+            raise IOError
         parser = ConfigParser.ConfigParser()
-        parser.read('config.ini')
+        parser.read(config_ini)
 
         main_options = {
             'ON': parser.getboolean('Main', 'ON'),
