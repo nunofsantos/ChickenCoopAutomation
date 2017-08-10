@@ -4,7 +4,7 @@ import smtplib
 from threading import Thread
 from time import sleep
 
-import Adafruit_DHT as DHT
+import Adafruit_DHT as DHT  # noqa: N814
 import RPi.GPIO as GPIO
 
 import led
@@ -235,8 +235,8 @@ class Coop(Thread):
                 kwargs['emails_to'] = self.config['Notifications']['EMAILS_TO']
                 self.email_callback(**kwargs)
 
-    def email_callback(self, **kwargs):
-        notification = kwargs['notification']
+    @staticmethod
+    def email_callback(**kwargs):
         gmail_credentials = kwargs['gmail_credentials']
         emails_to = kwargs['emails_to']
         gmail = smtplib.SMTP_SSL('smtp.gmail.com', 465)
@@ -254,7 +254,8 @@ Subject: {subject}
         gmail.sendmail(gmail_credentials['email'], emails_to.split(','), email_text)
         gmail.quit()
 
-    def log_callback(self, **kwargs):
+    @staticmethod
+    def log_callback(**kwargs):
         notification = kwargs['notification']
         log_message = '[{}] {}: {}'.format(notifications.Notification.severity_text(notification.severity),
                                            notification.type,

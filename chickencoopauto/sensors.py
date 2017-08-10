@@ -1,6 +1,6 @@
 import logging
 
-import Adafruit_DHT as DHT
+import Adafruit_DHT as DHT  # noqa: N814
 import RPi.GPIO as GPIO
 from w1thermsensor import W1ThermSensor
 
