@@ -19,5 +19,5 @@ if __name__ == '__main__':
         dummy.start()
         while coop.isAlive():
             coop.join(5)
-    except (Exception, KeyboardInterrupt):
+    finally:
         coop.shutdown()

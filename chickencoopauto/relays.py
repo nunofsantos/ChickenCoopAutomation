@@ -9,14 +9,15 @@ log = logging.getLogger(__name__)
 
 
 class Relay(object):
-    def __init__(self, coop, channel, port, initial_state):
+    def __init__(self, coop, channel, name, port, initial_state):
         self.coop = coop
         self.channel = channel
+        self.name = name
         self.port = port
         self._initial_state = initial_state
         self._state = initial_state
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(port, GPIO.OUT, initial=initial_state)
+        GPIO.setup(port, GPIO.OUT,initial=initial_state)
 
     @property
     def state(self):
@@ -39,7 +40,7 @@ class Relay(object):
 class RelayOperatedObject(NotifierMixin):
     notification_manual_mode = Notification(
         'manual mode',
-        Notification.WARN,
+        Notification.MANUAL,
         '{name} set to MANUAL mode'
     )
     notification_auto_mode = Notification(
@@ -60,11 +61,12 @@ class RelayOperatedObject(NotifierMixin):
         self.name = name
         self.relays = []
         if isinstance(relays, list):
-            self.relays .extend(relays)
+            self.relays.extend(relays)
         elif isinstance(relays, Relay):
             self.relays.append(relays)
         self.sunset_sunrise = sunset_sunrise
         self.manual_mode = manual_mode
+        self.coop.notifier_manager.register_notifier(self)
 
     @property
     def state(self):
@@ -74,6 +76,11 @@ class RelayOperatedObject(NotifierMixin):
         if self.sunset_sunrise:
             now = self.sunset_sunrise.refresh()
             log.debug('{} time is {}'.format(self.name, now.to('US/Eastern').format('HH:mm:ss')))
+        state = []
+        for r in self.relays:
+            log.debug('{} is {}'.format(r.name, 'ON' if r.state == self.coop.ON else 'OFF'))
+            state.append(r.state)
+        return state
 
     def _set_mode(self, manual_mode=False):
         if manual_mode == self.manual_mode:
@@ -113,24 +120,44 @@ class WaterHeater(RelayOperatedObject):
         'Water temp {temp:.1f} is above {max:.1f} maximum, turning off heater.',
         auto_clear=True
     )
+    notification_water_heater_off_empty_invalid = Notification(
+        'water heater off empty invalid',
+        Notification.INFO,
+        'Water tank is empty or in invalid state, turning off heater.',
+        auto_clear=True
+    )
 
     def __init__(self, coop, name, relay, temp_range, manual_mode=False):
         self.notifications = [
             self.notification_water_heater_on,
-            self.notification_water_heater_off
+            self.notification_water_heater_off,
+            self.notification_water_heater_off_empty_invalid
         ]
         super(WaterHeater, self).__init__(coop, name, relay, None, manual_mode)
         self.temp_range = temp_range
         self.temp = None
 
     def check(self, temp):
+        super(WaterHeater, self).check()
         self.temp = temp
-        if temp < self.temp_range[0] and not self.is_heating():
-            self.on(manual_mode=False)
-        elif temp > self.temp_range[1] and self.is_heating():
-            self.off(manual_mode=False)
+        if self.coop.water_level_dual_sensor.check() in (self.coop.water_level_dual_sensor.FULL,
+                                                         self.coop.water_level_dual_sensor.HALF):
+            if temp < self.temp_range[0] and not self.is_heating():
+                self.on(manual_mode=False)
+            elif temp > self.temp_range[1] and self.is_heating():
+                self.off(manual_mode=False)
+            else:
+                if self.manual_mode:
+                    self.set_auto_mode()
+                    self.clear_notification(self.notification_water_heater_off_empty_invalid)
+                log.info('Water heater is {}'.format('ON' if self.is_heating() else 'OFF'))
         else:
-            log.info('Water heater is {}'.format('ON' if self.is_heating() else 'OFF'))
+            # water level is empty or sensors are in invalid state
+            if self.is_heating():
+                self.send_notification(self.notification_water_heater_off_empty_invalid)
+                self.off(manual_mode=True)
+            else:
+                log.info('Water heater is {}'.format('ON' if self.is_heating() else 'OFF'))
 
     def is_heating(self):
         return self.state[0] == self.coop.ON
@@ -143,7 +170,8 @@ class WaterHeater(RelayOperatedObject):
     def off(self, relay_num=0, manual_mode=True):
         super(WaterHeater, self).off(relay_num=relay_num, manual_mode=manual_mode)
         self.clear_notification(self.notification_water_heater_on)
-        self.send_notification(self.notification_water_heater_off, temp=self.temp, max=self.temp_range[1])
+        if not manual_mode:
+            self.send_notification(self.notification_water_heater_off, temp=self.temp, max=self.temp_range[1])
 
     def set_temp_range(self, temp_range):
         self.temp_range = temp_range
@@ -161,6 +189,7 @@ class Light(RelayOperatedObject):
         'Turning OFF light',
         auto_clear=True
     )
+
     def __init__(self, coop, name, relay, sunset_sunrise, manual_mode=False):
         self.notifications = [
             self.notification_light_on,
@@ -221,6 +250,16 @@ class Door(RelayOperatedObject):
         'Door FAILED to close'
     )
 
+    CLOSED = True
+    OPEN = False
+    INVALID = None
+
+    states = {
+        'CLOSED': CLOSED,
+        'OPEN': OPEN,
+        'INVALID': INVALID
+    }
+
     def __init__(self, coop, name, relays, sunset_sunrise, door_open_sensor, door_closed_sensor, manual_mode=False):
         self.notifications = [
             self.notification_door_opening_sunrise,
@@ -234,8 +273,6 @@ class Door(RelayOperatedObject):
         super(Door, self).__init__(coop, name, relays, sunset_sunrise, manual_mode)
         self.open_sensor = door_open_sensor
         self.closed_sensor = door_closed_sensor
-        self.CLOSED = self.coop.OFF
-        self.OPEN = self.coop.ON
 
     @property
     def state(self):
@@ -250,7 +287,7 @@ class Door(RelayOperatedObject):
         else:
             self.send_notification(self.notification_door_sensor_invalid_state)
             self.set_manual_mode()
-            return None
+            return self.INVALID
 
     def check(self):
         super(Door, self).check()
@@ -268,7 +305,7 @@ class Door(RelayOperatedObject):
             else:
                 self.send_notification(self.notification_door_closing_sunset)
                 self.close(manual_mode=False)
-        elif current_state is not None:
+        elif current_state is not self.INVALID:
             log.info('Door {}is {} during the {}'.format('is in MANUAL mode, and ' if self.manual_mode else '',
                                                          'CLOSED' if current_state == self.CLOSED else 'OPEN',
                                                          'day' if is_day else 'night'))
@@ -315,6 +352,8 @@ class Door(RelayOperatedObject):
         super(Door, self).set_auto_mode()
         self.clear_notification(self.notification_door_manual_mode_closed_day)
         self.clear_notification(self.notification_door_manual_mode_open_night)
+        self.clear_notification(self.notification_door_failed_close)
+        self.clear_notification(self.notification_door_failed_open)
 
     def set_manual_mode(self):
         super(Door, self).set_manual_mode()

@@ -1,9 +1,10 @@
-import arrow
 import json
 import logging
 import requests
 from threading import Thread
 from time import sleep
+
+import arrow
 
 
 log = logging.getLogger(__name__)

@@ -17,6 +17,7 @@ class Sensor(NotifierMixin):
         super(Sensor, self).__init__(self.notifications)
         self.coop = coop
         self.name = name
+        self.coop.notifier_manager.register_notifier(self)
 
     def check(self, **kwargs):
         pass
@@ -31,6 +32,8 @@ class SwitchSensor(Sensor):
     )
 
     def __init__(self, coop, name, port, timeout=30000):
+        self.CLOSED = True
+        self.OPEN = False
         self.notifications.extend([
             self.notification_switch_sensor_failed_wait,
         ])
@@ -86,6 +89,60 @@ class WaterLevelSensor(SwitchSensor):
             self.send_notification(self.notification_water_level_low, name=self.name)
         else:
             self.clear_notification(self.notification_water_level_low)
+        return state
+
+
+class HalfEmptyWaterLevelSensors(Sensor):
+    notification_water_level_sensor_invalid_state = Notification(
+        'water level sensor invalid',
+        Notification.ERROR,
+        'Water level sensors are in invalid state!'
+    )
+
+    FULL = 1.0
+    HALF = 0.5
+    EMPTY = 0.0
+    INVALID = -1.0
+
+    states = {
+        'FULL': FULL,
+        'HALF': HALF,
+        'EMPTY': EMPTY,
+        'INVALID': INVALID
+    }
+
+    def __init__(self, coop, name, port_half, port_empty):
+        self.notifications = [
+            self.notification_water_level_sensor_invalid_state
+        ]
+        super(HalfEmptyWaterLevelSensors, self).__init__(coop, name)
+        self.half_sensor = WaterLevelSensor(
+            coop,
+            'Water Level Sensor Half',
+            port_half
+        )
+        self.empty_sensor = WaterLevelSensor(
+            coop,
+            'Water Level Sensor Empty',
+            port_empty
+        )
+
+    def check(self):
+        half_state = self.half_sensor.check()
+        empty_state = self.empty_sensor.check()
+
+        if half_state and not empty_state:
+            self.send_notification(self.notification_water_level_sensor_invalid_state)
+            state = self.states['INVALID']
+        elif not half_state:
+            self.clear_notification(self.notification_water_level_sensor_invalid_state)
+            state = self.states['HALF']
+        elif not empty_state:
+            self.clear_notification(self.notification_water_level_sensor_invalid_state)
+            state = self.states['EMPTY']
+        else:
+            self.clear_notification(self.notification_water_level_sensor_invalid_state)
+            state = self.states['FULL']
         return state
 
 

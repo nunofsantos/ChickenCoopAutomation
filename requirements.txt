@@ -1,0 +1,5 @@
+Adafruit_DHT
+arrow
+requests
+RPi
+w1thermsensor

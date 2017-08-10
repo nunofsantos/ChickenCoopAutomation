@@ -1,11 +1,14 @@
 import ConfigParser
 import logging
+import smtplib
 from threading import Thread
 from time import sleep
 
 import Adafruit_DHT as DHT
 import RPi.GPIO as GPIO
 
+import led
+import notifications
 import relays
 import sensors
 import utils
@@ -16,6 +19,7 @@ log = logging.getLogger(__name__)
 
 class Coop(Thread):
     def __init__(self):
+        self.notifier_manager = notifications.NotifierManager()
         super(Coop, self).__init__()
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
@@ -32,9 +36,15 @@ class Coop(Thread):
         main_options = {
             'ON': parser.getboolean('Main', 'ON'),
             'OFF': parser.getboolean('Main', 'OFF'),
-            'CHECK_DELAY': parser.getint('Main', 'CHECK_DELAY'),
+            'CHECK_FREQUENCY': parser.getint('Main', 'CHECK_FREQUENCY'),
             'LAT': parser.getfloat('Main', 'LAT'),
             'LON': parser.getfloat('Main', 'LON'),
+        }
+
+        status_led_options = {
+            'PORT_R': parser.getint('StatusLED', 'PORT_R'),
+            'PORT_G': parser.getint('StatusLED', 'PORT_G'),
+            'PORT_B': parser.getint('StatusLED', 'PORT_B'),
         }
 
         ambient_options = {
@@ -73,12 +83,24 @@ class Coop(Thread):
             'EXTRA_MIN_SUNSET': parser.getint('Door', 'EXTRA_MIN_SUNSET'),
         }
 
+        notifications_options = {
+            'LOG': parser.getboolean('Notifications', 'LOG'),
+            'LOG_THRESHOLD': parser.get('Notifications', 'LOG_THRESHOLD'),
+            'EMAIL': parser.getboolean('Notifications', 'EMAIL'),
+            'EMAIL_THRESHOLD': parser.get('Notifications', 'EMAIL_THRESHOLD'),
+            'EMAIL_FROM': parser.get('Notifications', 'EMAIL_FROM'),
+            'EMAIL_PASSWORD': parser.get('Notifications', 'EMAIL_PASSWORD'),
+            'EMAILS_TO': parser.get('Notifications', 'EMAILS_TO'),
+        }
+
         config = {
             'Main': main_options,
+            'StatusLED': status_led_options,
             'AmbientTempHumi': ambient_options,
             'Light': light_options,
             'Water': water_options,
             'Door': door_options,
+            'Notifications': notifications_options,
         }
 
         return config
@@ -100,11 +122,20 @@ class Coop(Thread):
             self.config['AmbientTempHumi']['HUMI_RANGE']
         )
 
+        self.status_led = led.RGBLED(
+            self,
+            'Status LED',
+            (self.config['StatusLED']['PORT_R'],
+             self.config['StatusLED']['PORT_G'],
+             self.config['StatusLED']['PORT_B']),
+            'off'
+        )
+
         self.relay_module = {
-            1: relays.Relay(self, 1, self.config['Water']['HEATER_PORT'], self.OFF),
-            2: relays.Relay(self, 2, self.config['Light']['PORT'], self.OFF),
-            3: relays.Relay(self, 3, self.config['Door']['PORT_1'], self.OFF),
-            4: relays.Relay(self, 4, self.config['Door']['PORT_2'], self.OFF),
+            1: relays.Relay(self, 1, 'Water Heater Relay', self.config['Water']['HEATER_PORT'], self.OFF),
+            2: relays.Relay(self, 2, 'Light Relay', self.config['Light']['PORT'], self.OFF),
+            3: relays.Relay(self, 3, 'Door Relay 1', self.config['Door']['PORT_1'], self.OFF),
+            4: relays.Relay(self, 4, 'Door Relay 2', self.config['Door']['PORT_2'], self.OFF),
         }
 
         self.water_heater_relay = self.relay_module[1]
@@ -118,14 +149,10 @@ class Coop(Thread):
             self,
             'Water Temp Sensor',
             self.water_heater)
-        self.water_level_sensor_top = sensors.WaterLevelSensor(
+        self.water_level_dual_sensor = sensors.HalfEmptyWaterLevelSensors(
             self,
-            'Water Level Sensor Top',
-            self.config['Water']['SENSOR_LEVEL_TOP_PORT']
-        )
-        self.water_level_sensor_bottom = sensors.WaterLevelSensor(
-            self,
-            'Water Level Sensor Bottom',
+            'Water Level Dual Sensor HalfEmpty',
+            self.config['Water']['SENSOR_LEVEL_TOP_PORT'],
             self.config['Water']['SENSOR_LEVEL_BOTTOM_PORT']
         )
 
@@ -165,32 +192,76 @@ class Coop(Thread):
 
     def run(self):
         while True:
-            # ambient temperature
             self.ambient_temp_humi_sensor.check()
-
-            # water temperature
             self.water_temp_sensor.check()
-
-            # water level
-            self.water_level_sensor_top.check()
-            self.water_level_sensor_bottom.check()
-
-            # light
+            self.water_level_dual_sensor.check()
             self.light.check()
-
-            #############################
-            # door switches
-            # self.door_open_sensor.check()
-            # self.door_closed_sensor.check()
-            #############################
-
-            # door
             self.door.check()
+            self.status_led.on(self._convert_status_to_color(self.status))
 
-            sleep(self.config['Main']['CHECK_DELAY'])
+            sleep(self.config['Main']['CHECK_FREQUENCY'])
 
     def shutdown(self):
         log.info('Resetting relays...')
         for relay in self.relay_module.values():
             relay.reset()
+        self.status_led.reset()
         GPIO.cleanup()
+
+    @property
+    def status(self):
+        s = self.notifier_manager.status
+        log.info('Coop status: {}'.format(notifications.Notification.severity_text(s)))
+        return s
+
+    @staticmethod
+    def _convert_status_to_color(status):
+        return 'red' if status == notifications.Notification.ERROR else \
+               'white' if status == notifications.Notification.MANUAL else \
+               'blue' if status == notifications.Notification.WARN else \
+               'green'
+
+    def notifier_callback(self, **kwargs):
+        severity = kwargs['notification'].severity
+        if self.config['Notifications']['LOG']:
+            if severity >= notifications.Notification.severity_levels[self.config['Notifications']['LOG_THRESHOLD']]:
+                self.log_callback(**kwargs)
+        if self.config['Notifications']['EMAIL']:
+            if severity >= notifications.Notification.severity_levels[self.config['Notifications']['EMAIL_THRESHOLD']]:
+                kwargs['gmail_credentials'] = {
+                    'email': self.config['Notifications']['EMAIL_FROM'],
+                    'password': self.config['Notifications']['EMAIL_PASSWORD'],
+                }
+                kwargs['emails_to'] = self.config['Notifications']['EMAILS_TO']
+                self.email_callback(**kwargs)
+
+    def email_callback(self, **kwargs):
+        notification = kwargs['notification']
+        gmail_credentials = kwargs['gmail_credentials']
+        emails_to = kwargs['emails_to']
+        gmail = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        gmail.ehlo()
+        gmail.login(gmail_credentials['email'], gmail_credentials['password'])
+        subject = 'Chicken Coop Alert!'
+        body = kwargs['message']
+        email_text = '''\
+From: {email_from}
+To: {to}
+Subject: {subject}
+
+{body}
+'''.format(email_from=gmail_credentials['email'], to=emails_to, subject=subject, body=body)
+        gmail.sendmail(gmail_credentials['email'], emails_to.split(','), email_text)
+        gmail.quit()
+
+    def log_callback(self, **kwargs):
+        notification = kwargs['notification']
+        log_message = '[{}] {}: {}'.format(notifications.Notification.severity_text(notification.severity),
+                                           notification.type,
+                                           kwargs['message'])
+        if notification.severity == notification.INFO:
+            log.info(log_message)
+        elif notification.severity == notification.WARN:
+            log.warning(log_message)
+        elif notification.severity == notification.ERROR:
+            log.error(log_message)
