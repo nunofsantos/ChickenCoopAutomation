@@ -16,10 +16,11 @@ class Notification(object):
         'ERROR': ERROR,
     }
 
-    def __init__(self, type, severity, message, single=True, auto_clear=False):
-        self.type = type
+    def __init__(self, notification_type, severity, message, clears=(), single=True, auto_clear=False):
+        self.type = notification_type
         self.severity = severity
         self.message = message
+        self.clears = clears
         self.single = single
         self.auto_clear = auto_clear
 
@@ -62,18 +63,20 @@ class NotifierMixin(object):
         if notification.type not in self.types:
             log.error('Invalid notification type "{}"'.format(notification.type))
         elif not notification.single or notification.type not in self.notification_sent:
-            self._send(notification, notification.message.format(**kwargs))
+            for clear in notification.clears:
+                self._clear_notification_type(clear)
+            self.coop.notifier_callback(notification=notification, message=notification.message.format(**kwargs))
             if not notification.auto_clear:
                 self.notification_sent[notification.type] = notification.severity
 
-    def clear_notification(self, notification):
-        if notification.type not in self.types:
-            log.error('Invalid notification type "{}"'.format(notification.type))
+    def _clear_notification_type(self, notification_type):
+        if notification_type not in self.types:
+            log.error('Invalid notification type "{}"'.format(notification_type))
         else:
-            self.notification_sent.pop(notification.type, None)
+            self.notification_sent.pop(notification_type, None)
 
-    def _send(self, notification, message):
-        self.coop.notifier_callback(notification=notification, message=message)
+    def clear_notification(self, notification):
+        self._clear_notification_type(notification.type)
 
     @property
     def status(self):

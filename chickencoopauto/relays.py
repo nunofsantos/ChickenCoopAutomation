@@ -17,7 +17,7 @@ class Relay(object):
         self._initial_state = initial_state
         self._state = initial_state
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(port, GPIO.OUT,initial=initial_state)
+        GPIO.setup(port, GPIO.OUT, initial=initial_state)
 
     @property
     def state(self):
@@ -41,12 +41,14 @@ class RelayOperatedObject(NotifierMixin):
     notification_manual_mode = Notification(
         'manual mode',
         Notification.MANUAL,
-        '{name} set to MANUAL mode'
+        '{name} set to MANUAL mode',
+        clears=('automatic mode', )
     )
     notification_auto_mode = Notification(
         'automatic mode',
         Notification.INFO,
         '{name} set to automatic mode',
+        clears=('manual mode', ),
         auto_clear=True
     )
     notifications = []
@@ -96,7 +98,6 @@ class RelayOperatedObject(NotifierMixin):
 
     def set_auto_mode(self):
         self.manual_mode = False
-        self.clear_notification(self.notification_manual_mode)
         self.send_notification(self.notification_auto_mode, name=self.name)
 
     def on(self, relay_num=0, manual_mode=True):
@@ -112,18 +113,21 @@ class WaterHeater(RelayOperatedObject):
     notification_water_heater_on = Notification(
         'water heater on',
         Notification.INFO,
-        'Water temp {temp:.1f} is below {min:.1f} minimum, turning on heater!'
+        'Water temp {temp:.1f} is below {min:.1f} minimum, turning on heater!',
+        clears=('water heater off', )
     )
     notification_water_heater_off = Notification(
         'water heater off',
         Notification.INFO,
         'Water temp {temp:.1f} is above {max:.1f} maximum, turning off heater.',
+        clears=('water heater on', ),
         auto_clear=True
     )
     notification_water_heater_off_empty_invalid = Notification(
         'water heater off empty invalid',
         Notification.INFO,
         'Water tank is empty or in invalid state, turning off heater.',
+        clears=('water heater on', ),
         auto_clear=True
     )
 
@@ -164,12 +168,10 @@ class WaterHeater(RelayOperatedObject):
 
     def on(self, relay_num=0, manual_mode=True):
         super(WaterHeater, self).on(relay_num=relay_num, manual_mode=manual_mode)
-        self.clear_notification(self.notification_water_heater_off)
         self.send_notification(self.notification_water_heater_on, temp=self.temp, min=self.temp_range[0])
 
     def off(self, relay_num=0, manual_mode=True):
         super(WaterHeater, self).off(relay_num=relay_num, manual_mode=manual_mode)
-        self.clear_notification(self.notification_water_heater_on)
         if not manual_mode:
             self.send_notification(self.notification_water_heater_off, temp=self.temp, max=self.temp_range[1])
 
@@ -181,12 +183,14 @@ class Light(RelayOperatedObject):
     notification_light_on = Notification(
         'light on',
         Notification.INFO,
-        'Turning ON light'
+        'Turning ON light',
+        clears=('light off', )
     )
     notification_light_off = Notification(
         'light off',
         Notification.INFO,
         'Turning OFF light',
+        clears=('light on', ),
         auto_clear=True
     )
 

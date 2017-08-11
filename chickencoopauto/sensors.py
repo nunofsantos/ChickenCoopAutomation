@@ -150,22 +150,26 @@ class AmbientTempHumiSensor(Sensor):
     notification_ambient_temp_high = Notification(
         'ambient temp high',
         Notification.WARN,
-        'Ambient temperature {temp:.1f} is higher than {max:.1f} maximum!'
+        'Ambient temperature {temp:.1f} is higher than {max:.1f} maximum!',
+        clears=('ambient temp low', )
     )
     notification_ambient_temp_low = Notification(
         'ambient temp low',
         Notification.WARN,
-        'Ambient temperature {temp:.1f} is lower than {min:.1f} minimum!'
+        'Ambient temperature {temp:.1f} is lower than {min:.1f} minimum!',
+        clears=('ambient temp high', )
     )
     notification_ambient_humi_high = Notification(
         'ambient humi high',
         Notification.WARN,
-        'Ambient humidity {humi:.1f} is higher than {max:.1f} maximum!'
+        'Ambient humidity {humi:.1f} is higher than {max:.1f} maximum!',
+        clears=('ambient humi low', )
     )
     notification_ambient_humi_low = Notification(
         'ambient humi low',
         Notification.WARN,
-        'Ambient humidity {humi:.1f} is lower than {min:.1f} minimum!'
+        'Ambient humidity {humi:.1f} is lower than {min:.1f} minimum!',
+        clears=('ambient humi high', )
     )
 
     def __init__(self, coop, name, sensor, port, alert_temp, alert_humi):
@@ -197,10 +201,8 @@ class AmbientTempHumiSensor(Sensor):
 
     def check_alert_temp(self, temp):
         if temp < self.alert_temp[0]:
-            self.clear_notification(self.notification_ambient_temp_high)
             self.send_notification(self.notification_ambient_temp_low, temp=temp, min=self.alert_temp[0])
         elif temp > self.alert_temp[1]:
-            self.clear_notification(self.notification_ambient_temp_low)
             self.send_notification(self.notification_ambient_temp_high, temp=temp, max=self.alert_temp[1])
         else:
             self.clear_notification(self.notification_ambient_temp_high)
@@ -208,10 +210,8 @@ class AmbientTempHumiSensor(Sensor):
 
     def check_alert_humi(self, humi):
         if humi < self.alert_humi[0]:
-            self.clear_notification(self.notification_ambient_humi_high)
             self.send_notification(self.notification_ambient_humi_low, humi=humi, min=self.alert_humi[0])
         elif humi > self.alert_humi[1]:
-            self.clear_notification(self.notification_ambient_humi_low)
             self.send_notification(self.notification_ambient_humi_high, humi=humi, max=self.alert_humi[1])
         else:
             self.clear_notification(self.notification_ambient_humi_high)
