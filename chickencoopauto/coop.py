@@ -200,7 +200,7 @@ class Coop(Thread):
             self.water_level_dual_sensor.check()
             self.light.check()
             self.door.check()
-            self.status_led.on(self._convert_status_to_color(self.status))
+            self.status_led.on(self._convert_status_to_color(self.status()))
 
             sleep(self.config['Main']['CHECK_FREQUENCY'])
 
@@ -211,9 +211,8 @@ class Coop(Thread):
         self.status_led.reset()
         GPIO.cleanup()
 
-    @property
     def status(self):
-        s = self.notifier_manager.status
+        s = self.notifier_manager.status()
         log.info('Coop status: {}'.format(notifications.Notification.severity_text(s)))
         return s
 
@@ -261,7 +260,7 @@ Subject: {subject}
     def log_callback(**kwargs):
         notification = kwargs['notification']
         log_message = '[{}] {}: {}'.format(notifications.Notification.severity_text(notification.severity),
-                                           notification.type,
+                                           notification.type.__name__,
                                            kwargs['message'])
         if notification.severity == notification.INFO:
             log.info(log_message)

@@ -4,7 +4,16 @@ import Adafruit_DHT as DHT  # noqa: N814
 import RPi.GPIO as GPIO
 from w1thermsensor import W1ThermSensor
 
-from notifications import Notification, NotifierMixin
+from notifications import (
+    NotifierMixin,
+    SwitchSensorFailedWaitNotification,
+    WaterSensorLevelLowNotification,
+    WaterSensorInvalidNotification,
+    AmbientTempHighNotification,
+    AmbientTempLowNotification,
+    AmbientHumiHighNotification,
+    AmbientHumiLowNotification
+)
 
 
 log = logging.getLogger(__name__)
@@ -17,6 +26,7 @@ class Sensor(NotifierMixin):
         super(Sensor, self).__init__(self.notifications)
         self.coop = coop
         self.name = name
+        self.state = None
         self.coop.notifier_manager.register_notifier(self)
 
     def check(self, **kwargs):
@@ -24,18 +34,11 @@ class Sensor(NotifierMixin):
 
 
 class SwitchSensor(Sensor):
-    notification_switch_sensor_failed_wait = Notification(
-        'switch sensor failed wait',
-        Notification.ERROR,
-        '{name} FAILED to wait to {state}',
-        auto_clear=True
-    )
-
     def __init__(self, coop, name, port, timeout=30000):
         self.CLOSED = True
         self.OPEN = False
         self.notifications.extend([
-            self.notification_switch_sensor_failed_wait,
+            SwitchSensorFailedWaitNotification,
         ])
         super(SwitchSensor, self).__init__(coop, name)
         self.port = port
@@ -45,9 +48,9 @@ class SwitchSensor(Sensor):
 
     def check(self):
         super(SwitchSensor, self).check()
-        state = GPIO.input(self.port)
-        log.info('{} is {}'.format(self.name, 'CLOSED' if state else 'OPEN'))
-        return state
+        self.state = GPIO.input(self.port)
+        log.info('{} is {}'.format(self.name, 'CLOSED' if self.state else 'OPEN'))
+        return self.state
 
     def wait_on(self):
         return self._wait(detect=GPIO.RISING)
@@ -56,14 +59,14 @@ class SwitchSensor(Sensor):
         return self._wait(detect=GPIO.FALLING)
 
     def _wait(self, detect=GPIO.RISING):
-        state = self.check()
-        if (state == GPIO.HIGH and detect == GPIO.RISING) or (state == GPIO.LOW and detect == GPIO.FALLING):
+        self.state = self.check()
+        if (self.state == GPIO.HIGH and detect == GPIO.RISING) or (self.state == GPIO.LOW and detect == GPIO.FALLING):
             return False
         log.info('Waiting...')
         result = GPIO.wait_for_edge(self.port, detect, timeout=self.timeout)
         if result is None:
-            self.send_notification(self.notification_switch_sensor_failed_wait,
-                                   name=self.name, state='OPEN' if state else 'CLOSE')
+            self.send_notification(SwitchSensorFailedWaitNotification(name=self.name,
+                                                                      state='OPEN' if self.state else 'CLOSE'))
             return False
         log.info('Done!')
         self.check()
@@ -71,34 +74,22 @@ class SwitchSensor(Sensor):
 
 
 class WaterLevelSensor(SwitchSensor):
-    notification_water_level_low = Notification(
-        'water level low',
-        Notification.WARN,
-        'Water level below {name} level'
-    )
-
     def __init__(self, coop, name, port):
         self.notifications = [
-            self.notification_water_level_low
+            WaterSensorLevelLowNotification
         ]
         super(WaterLevelSensor, self).__init__(coop, name, port)
 
     def check(self):
-        state = super(WaterLevelSensor, self).check()
-        if not state:
-            self.send_notification(self.notification_water_level_low, name=self.name)
+        self.state = super(WaterLevelSensor, self).check()
+        if self.state == self.OPEN:
+            self.send_notification(WaterSensorLevelLowNotification(name=self.name))
         else:
-            self.clear_notification(self.notification_water_level_low)
-        return state
+            self.clear_notification(WaterSensorLevelLowNotification)
+        return self.state
 
 
 class HalfEmptyWaterLevelSensors(Sensor):
-    notification_water_level_sensor_invalid_state = Notification(
-        'water level sensor invalid',
-        Notification.ERROR,
-        'Water level sensors are in invalid state!'
-    )
-
     FULL = 1.0
     HALF = 0.5
     EMPTY = 0.0
@@ -113,7 +104,8 @@ class HalfEmptyWaterLevelSensors(Sensor):
 
     def __init__(self, coop, name, port_half, port_empty):
         self.notifications = [
-            self.notification_water_level_sensor_invalid_state
+            WaterSensorLevelLowNotification,
+            WaterSensorInvalidNotification
         ]
         super(HalfEmptyWaterLevelSensors, self).__init__(coop, name)
         self.half_sensor = WaterLevelSensor(
@@ -132,90 +124,67 @@ class HalfEmptyWaterLevelSensors(Sensor):
         empty_state = self.empty_sensor.check()
 
         if half_state and not empty_state:
-            self.send_notification(self.notification_water_level_sensor_invalid_state)
-            state = self.states['INVALID']
-        elif not half_state:
-            self.clear_notification(self.notification_water_level_sensor_invalid_state)
-            state = self.states['HALF']
-        elif not empty_state:
-            self.clear_notification(self.notification_water_level_sensor_invalid_state)
-            state = self.states['EMPTY']
-        else:
-            self.clear_notification(self.notification_water_level_sensor_invalid_state)
-            state = self.states['FULL']
-        return state
+            self.send_notification(WaterSensorInvalidNotification())
+            self.state = self.states['INVALID']
+        if not half_state and empty_state:
+            self.clear_notification(WaterSensorInvalidNotification)
+            self.state = self.states['HALF']
+        if not half_state and not empty_state:
+            self.send_notification(WaterSensorLevelLowNotification(name=self.name))
+            self.state = self.states['EMPTY']
+        if half_state and empty_state:
+            self.clear_notification(WaterSensorInvalidNotification)
+            self.state = self.states['FULL']
+        return self.state
 
 
 class AmbientTempHumiSensor(Sensor):
-    notification_ambient_temp_high = Notification(
-        'ambient temp high',
-        Notification.WARN,
-        'Ambient temperature {temp:.1f} is higher than {max:.1f} maximum!',
-        clears=('ambient temp low', )
-    )
-    notification_ambient_temp_low = Notification(
-        'ambient temp low',
-        Notification.WARN,
-        'Ambient temperature {temp:.1f} is lower than {min:.1f} minimum!',
-        clears=('ambient temp high', )
-    )
-    notification_ambient_humi_high = Notification(
-        'ambient humi high',
-        Notification.WARN,
-        'Ambient humidity {humi:.1f} is higher than {max:.1f} maximum!',
-        clears=('ambient humi low', )
-    )
-    notification_ambient_humi_low = Notification(
-        'ambient humi low',
-        Notification.WARN,
-        'Ambient humidity {humi:.1f} is lower than {min:.1f} minimum!',
-        clears=('ambient humi high', )
-    )
-
     def __init__(self, coop, name, sensor, port, alert_temp, alert_humi):
         self.notifications = [
-            self.notification_ambient_temp_high,
-            self.notification_ambient_temp_low,
-            self.notification_ambient_humi_high,
-            self.notification_ambient_humi_low,
+            AmbientTempHighNotification,
+            AmbientTempLowNotification,
+            AmbientHumiHighNotification,
+            AmbientHumiLowNotification,
         ]
         super(AmbientTempHumiSensor, self).__init__(coop, name)
         self.sensor = sensor
         self.port = port
         self.alert_temp = alert_temp
         self.alert_humi = alert_humi
+        self.humi = None
+        self.temp = None
 
     def check(self, max_tries=2):
         super(AmbientTempHumiSensor, self).check()
-        humi, temp = DHT.read_retry(self.sensor, self.port, retries=max_tries)
-        if temp:
-            temp = float(temp) * 1.8 + 32.0
-            self.check_alert_temp(temp)
-        if humi:
-            self.check_alert_humi(humi)
-        if humi and temp:
-            log.info('Humi: {:.1f}  Temp: {:.1f}'.format(float(humi), float(temp)))
+        self.humi, self.temp = DHT.read_retry(self.sensor, self.port, retries=max_tries)
+        if self.temp:
+            self.temp = float(self.temp) * 1.8 + 32.0
+            self.check_alert_temp(self.temp)
+        if self.humi:
+            self.check_alert_humi(self.humi)
+        if self.humi and self.temp:
+            log.info('Humi: {:.1f}  Temp: {:.1f}'.format(float(self.humi), float(self.temp)))
         else:
             log.warning('Unable to get ambient humidity and temperature')
-        return humi, temp
+        return self.humi, self.temp
 
     def check_alert_temp(self, temp):
         if temp < self.alert_temp[0]:
-            self.send_notification(self.notification_ambient_temp_low, temp=temp, min=self.alert_temp[0])
+            self.send_notification(AmbientTempLowNotification(temp=temp, mini=self.alert_temp[0]))
         elif temp > self.alert_temp[1]:
-            self.send_notification(self.notification_ambient_temp_high, temp=temp, max=self.alert_temp[1])
+            self.send_notification(AmbientTempHighNotification(temp=temp, maxi=self.alert_temp[1]))
         else:
-            self.clear_notification(self.notification_ambient_temp_high)
-            self.clear_notification(self.notification_ambient_temp_low)
+            self.clear_notification(AmbientTempHighNotification)
+            self.clear_notification(AmbientTempLowNotification)
 
     def check_alert_humi(self, humi):
         if humi < self.alert_humi[0]:
-            self.send_notification(self.notification_ambient_humi_low, humi=humi, min=self.alert_humi[0])
+            self.send_notification(AmbientHumiLowNotification(humi=humi, mini=self.alert_humi[0]))
         elif humi > self.alert_humi[1]:
-            self.send_notification(self.notification_ambient_humi_high, humi=humi, max=self.alert_humi[1])
+            self.send_notification(AmbientHumiHighNotification(humi=humi, maxi=self.alert_humi[1]))
         else:
-            self.clear_notification(self.notification_ambient_humi_high)
-            self.clear_notification(self.notification_ambient_humi_low)
+            self.clear_notification(AmbientHumiHighNotification)
+            self.clear_notification(AmbientHumiLowNotification)
 
     def set_alert_temp(self, alert_temp):
         self.alert_temp = alert_temp
@@ -232,7 +201,7 @@ class WaterTempSensor(Sensor):
 
     def check(self):
         super(WaterTempSensor, self).check()
-        temp = self.sensor.get_temperature(W1ThermSensor.DEGREES_F)
-        log.info('Water temp: {:.1f}'.format(temp))
-        self.heater.check(temp)
-        return temp
+        self.state = self.sensor.get_temperature(W1ThermSensor.DEGREES_F)
+        log.info('Water temp: {:.1f}'.format(self.state))
+        self.heater.check(self.state)
+        return self.state

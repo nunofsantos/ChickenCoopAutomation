@@ -2,8 +2,23 @@ import logging
 
 import RPi.GPIO as GPIO
 
-from notifications import Notification, NotifierMixin
-
+from notifications import (
+    NotifierMixin,
+    ManualModeNotification,
+    AutomaticModeNotification,
+    WaterHeaterOnNotification,
+    WaterHeaterOffNotification,
+    WaterHeaterOffEmptyInvalidNotification,
+    LightOnNotification,
+    LightOffNotification,
+    DoorOpeningSunriseNotification,
+    DoorClosingSunsetNotification,
+    DoorSensorInvalidStateNotification,
+    DoorClosedDayNotification,
+    DoorOpenNightNotification,
+    DoorFailedOpenNotification,
+    DoorFailedCloseNotification,
+)
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +34,6 @@ class Relay(object):
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(port, GPIO.OUT, initial=initial_state)
 
-    @property
     def state(self):
         return self._state
 
@@ -38,25 +52,12 @@ class Relay(object):
 
 
 class RelayOperatedObject(NotifierMixin):
-    notification_manual_mode = Notification(
-        'manual mode',
-        Notification.MANUAL,
-        '{name} set to MANUAL mode',
-        clears=('automatic mode', )
-    )
-    notification_auto_mode = Notification(
-        'automatic mode',
-        Notification.INFO,
-        '{name} set to automatic mode',
-        clears=('manual mode', ),
-        auto_clear=True
-    )
     notifications = []
 
     def __init__(self, coop, name, relays, sunset_sunrise, manual_mode=False):
         self.notifications.extend([
-            self.notification_manual_mode,
-            self.notification_auto_mode,
+            ManualModeNotification,
+            AutomaticModeNotification,
         ])
         super(RelayOperatedObject, self).__init__(self.notifications)
         self.coop = coop
@@ -70,7 +71,6 @@ class RelayOperatedObject(NotifierMixin):
         self.manual_mode = manual_mode
         self.coop.notifier_manager.register_notifier(self)
 
-    @property
     def state(self):
         return [r.state for r in self.relays]
 
@@ -94,11 +94,11 @@ class RelayOperatedObject(NotifierMixin):
 
     def set_manual_mode(self):
         self.manual_mode = True
-        self.send_notification(self.notification_manual_mode, name=self.name)
+        self.send_notification(ManualModeNotification(name=self.name))
 
     def set_auto_mode(self):
         self.manual_mode = False
-        self.send_notification(self.notification_auto_mode, name=self.name)
+        self.send_notification(AutomaticModeNotification(name=self.name))
 
     def on(self, relay_num=0, manual_mode=True):
         self._set_mode(manual_mode)
@@ -110,32 +110,11 @@ class RelayOperatedObject(NotifierMixin):
 
 
 class WaterHeater(RelayOperatedObject):
-    notification_water_heater_on = Notification(
-        'water heater on',
-        Notification.INFO,
-        'Water temp {temp:.1f} is below {min:.1f} minimum, turning on heater!',
-        clears=('water heater off', )
-    )
-    notification_water_heater_off = Notification(
-        'water heater off',
-        Notification.INFO,
-        'Water temp {temp:.1f} is above {max:.1f} maximum, turning off heater.',
-        clears=('water heater on', ),
-        auto_clear=True
-    )
-    notification_water_heater_off_empty_invalid = Notification(
-        'water heater off empty invalid',
-        Notification.INFO,
-        'Water tank is empty or in invalid state, turning off heater.',
-        clears=('water heater on', ),
-        auto_clear=True
-    )
-
     def __init__(self, coop, name, relay, temp_range, manual_mode=False):
         self.notifications = [
-            self.notification_water_heater_on,
-            self.notification_water_heater_off,
-            self.notification_water_heater_off_empty_invalid
+            WaterHeaterOnNotification,
+            WaterHeaterOffNotification,
+            WaterHeaterOffEmptyInvalidNotification,
         ]
         super(WaterHeater, self).__init__(coop, name, relay, None, manual_mode)
         self.temp_range = temp_range
@@ -144,8 +123,9 @@ class WaterHeater(RelayOperatedObject):
     def check(self, temp):
         super(WaterHeater, self).check()
         self.temp = temp
-        if self.coop.water_level_dual_sensor.check() in (self.coop.water_level_dual_sensor.FULL,
-                                                         self.coop.water_level_dual_sensor.HALF):
+        water_level_dual_sensor_state = self.coop.water_level_dual_sensor.check()
+        if  water_level_dual_sensor_state == self.coop.water_level_dual_sensor.FULL or \
+            water_level_dual_sensor_state == self.coop.water_level_dual_sensor.HALF:
             if temp < self.temp_range[0] and not self.is_heating():
                 self.on(manual_mode=False)
             elif temp > self.temp_range[1] and self.is_heating():
@@ -153,51 +133,38 @@ class WaterHeater(RelayOperatedObject):
             else:
                 if self.manual_mode:
                     self.set_auto_mode()
-                    self.clear_notification(self.notification_water_heater_off_empty_invalid)
+                    self.clear_notification(WaterHeaterOffEmptyInvalidNotification)
                 log.info('Water heater is {}'.format('ON' if self.is_heating() else 'OFF'))
         else:
             # water level is empty or sensors are in invalid state
             if self.is_heating():
-                self.send_notification(self.notification_water_heater_off_empty_invalid)
+                self.send_notification(WaterHeaterOffEmptyInvalidNotification())
                 self.off(manual_mode=True)
             else:
                 log.info('Water heater is {}'.format('ON' if self.is_heating() else 'OFF'))
+        return self.state()[0]
 
     def is_heating(self):
-        return self.state[0] == self.coop.ON
+        return self.state()[0] == self.coop.ON
 
     def on(self, relay_num=0, manual_mode=True):
         super(WaterHeater, self).on(relay_num=relay_num, manual_mode=manual_mode)
-        self.send_notification(self.notification_water_heater_on, temp=self.temp, min=self.temp_range[0])
+        self.send_notification(WaterHeaterOnNotification(temp=self.temp, mini=self.temp_range[0]))
 
     def off(self, relay_num=0, manual_mode=True):
         super(WaterHeater, self).off(relay_num=relay_num, manual_mode=manual_mode)
         if not manual_mode:
-            self.send_notification(self.notification_water_heater_off, temp=self.temp, max=self.temp_range[1])
+            self.send_notification(WaterHeaterOffNotification(temp=self.temp, maxi=self.temp_range[1]))
 
     def set_temp_range(self, temp_range):
         self.temp_range = temp_range
 
 
 class Light(RelayOperatedObject):
-    notification_light_on = Notification(
-        'light on',
-        Notification.INFO,
-        'Turning ON light',
-        clears=('light off', )
-    )
-    notification_light_off = Notification(
-        'light off',
-        Notification.INFO,
-        'Turning OFF light',
-        clears=('light on', ),
-        auto_clear=True
-    )
-
     def __init__(self, coop, name, relay, sunset_sunrise, manual_mode=False):
         self.notifications = [
-            self.notification_light_on,
-            self.notification_light_off
+            LightOnNotification,
+            LightOffNotification,
         ]
         super(Light, self).__init__(coop, name, relay, sunset_sunrise, manual_mode)
 
@@ -206,54 +173,14 @@ class Light(RelayOperatedObject):
 
     def on(self, relay_num=0, manual_mode=True):
         super(Light, self).on(relay_num=relay_num, manual_mode=manual_mode)
-        self.clear_notification(self.notification_light_off)
-        self.send_notification(self.notification_light_on)
+        self.send_notification(LightOnNotification())
 
     def off(self, relay_num=0, manual_mode=True):
         super(Light, self).on(relay_num=relay_num, manual_mode=manual_mode)
-        self.clear_notification(self.notification_light_on)
-        self.send_notification(self.notification_light_off)
+        self.send_notification(LightOffNotification())
 
 
 class Door(RelayOperatedObject):
-    notification_door_opening_sunrise = Notification(
-        'door opening',
-        Notification.INFO,
-        'Door was closed, opening after sunrise',
-        auto_clear=True
-    )
-    notification_door_closing_sunset = Notification(
-        'door closing',
-        Notification.INFO,
-        'Door was open, closing after sunset',
-        auto_clear=True
-    )
-    notification_door_sensor_invalid_state = Notification(
-        'door sensor invalid',
-        Notification.ERROR,
-        'Door sensors are in invalid state!'
-    )
-    notification_door_manual_mode_closed_day = Notification(
-        'door manual mode closed day',
-        Notification.WARN,
-        'Door is in MANUAL mode, and is closed during the day!'
-    )
-    notification_door_manual_mode_open_night = Notification(
-        'door manual mode open night',
-        Notification.WARN,
-        'Door is in MANUAL mode, and is open during the night!'
-    )
-    notification_door_failed_open = Notification(
-        'door failed open',
-        Notification.ERROR,
-        'Door FAILED to open'
-    )
-    notification_door_failed_close = Notification(
-        'door failed close',
-        Notification.ERROR,
-        'Door FAILED to close'
-    )
-
     CLOSED = True
     OPEN = False
     INVALID = None
@@ -266,50 +193,49 @@ class Door(RelayOperatedObject):
 
     def __init__(self, coop, name, relays, sunset_sunrise, door_open_sensor, door_closed_sensor, manual_mode=False):
         self.notifications = [
-            self.notification_door_opening_sunrise,
-            self.notification_door_closing_sunset,
-            self.notification_door_sensor_invalid_state,
-            self.notification_door_manual_mode_closed_day,
-            self.notification_door_manual_mode_open_night,
-            self.notification_door_failed_open,
-            self.notification_door_failed_close,
+            DoorOpeningSunriseNotification,
+            DoorClosingSunsetNotification,
+            DoorSensorInvalidStateNotification,
+            DoorClosedDayNotification,
+            DoorOpenNightNotification,
+            DoorFailedOpenNotification,
+            DoorFailedCloseNotification,
         ]
         super(Door, self).__init__(coop, name, relays, sunset_sunrise, manual_mode)
         self.open_sensor = door_open_sensor
         self.closed_sensor = door_closed_sensor
 
-    @property
     def state(self):
         open_sensor_state = self.open_sensor.check()
         closed_sensor_state = self.closed_sensor.check()
         if open_sensor_state and not closed_sensor_state:
-            self.clear_notification(self.notification_door_sensor_invalid_state)
-            self.clear_notification(self.notification_door_failed_open)
+            self.clear_notification(DoorSensorInvalidStateNotification)
+            self.clear_notification(DoorFailedOpenNotification)
             return self.OPEN
         elif closed_sensor_state and not open_sensor_state:
-            self.clear_notification(self.notification_door_sensor_invalid_state)
-            self.clear_notification(self.notification_door_failed_close)
+            self.clear_notification(DoorSensorInvalidStateNotification)
+            self.clear_notification(DoorFailedCloseNotification)
             return self.CLOSED
         else:
-            self.send_notification(self.notification_door_sensor_invalid_state)
+            self.send_notification(DoorSensorInvalidStateNotification())
             self.set_manual_mode()
             return self.INVALID
 
     def check(self):
         super(Door, self).check()
         is_day = self.sunset_sunrise.is_day()
-        current_state = self.state
+        current_state = self.state()
         if current_state == self.CLOSED and is_day:
             if self.manual_mode:
-                self.send_notification(self.notification_door_manual_mode_closed_day)
+                self.send_notification(DoorClosedDayNotification())
             else:
-                self.send_notification(self.notification_door_opening_sunrise)
+                self.send_notification(DoorOpeningSunriseNotification())
                 self.open(manual_mode=False)
         elif current_state == self.OPEN and not is_day:
             if self.manual_mode:
-                self.send_notification(self.notification_door_manual_mode_open_night)
+                self.send_notification(DoorOpenNightNotification())
             else:
-                self.send_notification(self.notification_door_closing_sunset)
+                self.send_notification(DoorClosingSunsetNotification())
                 self.close(manual_mode=False)
         elif current_state is not self.INVALID:
             log.info('Door {}is {} during the {}'.format('is in MANUAL mode, and ' if self.manual_mode else '',
@@ -327,11 +253,11 @@ class Door(RelayOperatedObject):
                 opened = None
             super(Door, self).off(1, manual_mode)
             if not (opening or opened):
-                self.send_notification(self.notification_door_failed_open)
+                self.send_notification(DoorFailedOpenNotification())
                 self.set_manual_mode()
             else:
-                self.clear_notification(self.notification_door_failed_open)
-                self.clear_notification(self.notification_door_manual_mode_closed_day)
+                self.clear_notification(DoorFailedOpenNotification)
+                self.clear_notification(DoorClosedDayNotification)
         else:
             log.warning('Door is already open')
 
@@ -346,22 +272,22 @@ class Door(RelayOperatedObject):
                 closed = None
             super(Door, self).off(0, manual_mode)
             if not (closing or closed):
-                self.send_notification(self.notification_door_failed_close)
+                self.send_notification(DoorFailedCloseNotification())
                 self.set_manual_mode()
             else:
-                self.clear_notification(self.notification_door_failed_close)
-                self.clear_notification(self.notification_door_manual_mode_open_night)
+                self.clear_notification(DoorFailedCloseNotification)
+                self.clear_notification(DoorOpenNightNotification)
         else:
             log.warning('Door is already closed')
 
     def set_auto_mode(self):
         super(Door, self).set_auto_mode()
-        self.clear_notification(self.notification_door_manual_mode_closed_day)
-        self.clear_notification(self.notification_door_manual_mode_open_night)
-        self.clear_notification(self.notification_door_failed_close)
-        self.clear_notification(self.notification_door_failed_open)
+        self.clear_notification(DoorClosedDayNotification)
+        self.clear_notification(DoorOpenNightNotification)
+        self.clear_notification(DoorFailedCloseNotification)
+        self.clear_notification(DoorFailedOpenNotification)
 
     def set_manual_mode(self):
         super(Door, self).set_manual_mode()
-        self.clear_notification(self.notification_door_manual_mode_closed_day)
-        self.clear_notification(self.notification_door_manual_mode_open_night)
+        self.clear_notification(DoorClosedDayNotification)
+        self.clear_notification(DoorOpenNightNotification)
