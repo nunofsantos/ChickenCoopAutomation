@@ -8,7 +8,7 @@ import Adafruit_DHT as DHT  # noqa: N814
 import RPi.GPIO as GPIO
 
 import led
-import notifications
+from notifications import Notification
 import relays
 import sensors
 import utils
@@ -17,16 +17,14 @@ import utils
 log = logging.getLogger(__name__)
 
 
-class Coop(Thread):
+class Coop(Thread, utils.Singleton):
     def __init__(self):
-        self.notifier_manager = notifications.NotifierManager()
-        super(Coop, self).__init__()
+        self.initialized = False
+        Thread.__init__(self)
+        utils.Singleton.__init__(self)
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
         self.config = self._read_config()
-        self.ON = self.config['Main']['ON']
-        self.OFF = self.config['Main']['OFF']
-        self._create_objects()
 
     @staticmethod
     def _read_config():
@@ -34,8 +32,6 @@ class Coop(Thread):
         parser.read('config.ini')
 
         main_options = {
-            'ON': parser.getboolean('Main', 'ON'),
-            'OFF': parser.getboolean('Main', 'OFF'),
             'CHECK_FREQUENCY': parser.getint('Main', 'CHECK_FREQUENCY'),
             'LAT': parser.getfloat('Main', 'LAT'),
             'LON': parser.getfloat('Main', 'LON'),
@@ -49,13 +45,16 @@ class Coop(Thread):
 
         ambient_options = {
             'TEMP_RANGE': [
+                parser.getfloat('AmbientTempHumi', 'TEMP_MIN_ERROR'),
                 parser.getfloat('AmbientTempHumi', 'TEMP_MIN'),
-                parser.getfloat('AmbientTempHumi', 'TEMP_MAX')
+                parser.getfloat('AmbientTempHumi', 'TEMP_MAX'),
+                parser.getfloat('AmbientTempHumi', 'TEMP_MAX_ERROR'),
             ],
             'HUMI_RANGE': [
                 parser.getfloat('AmbientTempHumi', 'HUMI_MIN'),
-                parser.getfloat('AmbientTempHumi', 'HUMI_MAX')
+                parser.getfloat('AmbientTempHumi', 'HUMI_MAX'),
             ],
+            'TEMP_HUMI_CACHE': parser.getint('AmbientTempHumi', 'TEMP_HUMI_CACHE'),
             'SENSOR_PORT': parser.getint('AmbientTempHumi', 'SENSOR_PORT'),
         }
 
@@ -66,8 +65,10 @@ class Coop(Thread):
         water_options = {
             'HEATER_PORT': parser.getint('Water', 'HEATER_PORT'),
             'HEATER_TEMP_RANGE': [
+                parser.getfloat('Water', 'HEATER_TEMP_LOW_ERROR'),
                 parser.getfloat('Water', 'HEATER_TEMP_ON'),
-                parser.getfloat('Water', 'HEATER_TEMP_OFF')
+                parser.getfloat('Water', 'HEATER_TEMP_OFF'),
+                parser.getfloat('Water', 'HEATER_TEMP_HIGH_ERROR'),
             ],
             'SENSOR_LEVEL_TOP_PORT': parser.getint('Water', 'SENSOR_LEVEL_TOP_PORT'),
             'SENSOR_LEVEL_BOTTOM_PORT': parser.getint('Water', 'SENSOR_LEVEL_BOTTOM_PORT'),
@@ -105,8 +106,10 @@ class Coop(Thread):
 
         return config
 
-    def _create_objects(self):
-        self.sunset_sunrise = utils.SunriseSunset(
+    def initialize_sensors_relays(self):
+        self.sunset_sunrise_sensor = sensors.SunriseSunsetSensor(
+            self,
+            'Sunrise/Sunset Sensor',
             self.config['Main']['LAT'],
             self.config['Main']['LON'],
             extra_min_sunrise=self.config['Door']['EXTRA_MIN_SUNRISE'],
@@ -119,7 +122,8 @@ class Coop(Thread):
             DHT.DHT22,
             self.config['AmbientTempHumi']['SENSOR_PORT'],
             self.config['AmbientTempHumi']['TEMP_RANGE'],
-            self.config['AmbientTempHumi']['HUMI_RANGE']
+            self.config['AmbientTempHumi']['HUMI_RANGE'],
+            self.config['AmbientTempHumi']['TEMP_HUMI_CACHE']
         )
 
         self.status_led = led.RGBLED(
@@ -127,15 +131,14 @@ class Coop(Thread):
             'Status LED',
             (self.config['StatusLED']['PORT_R'],
              self.config['StatusLED']['PORT_G'],
-             self.config['StatusLED']['PORT_B']),
-            'off'
+             self.config['StatusLED']['PORT_B'])
         )
 
         self.relay_module = {
-            1: relays.Relay(self, 1, 'Water Heater Relay', self.config['Water']['HEATER_PORT'], self.OFF),
-            2: relays.Relay(self, 2, 'Light Relay', self.config['Light']['PORT'], self.OFF),
-            3: relays.Relay(self, 3, 'Door Relay 1', self.config['Door']['PORT_1'], self.OFF),
-            4: relays.Relay(self, 4, 'Door Relay 2', self.config['Door']['PORT_2'], self.OFF),
+            1: relays.Relay(self, 1, 'Water Heater Relay', self.config['Water']['HEATER_PORT'], 'off'),
+            2: relays.Relay(self, 2, 'Light Relay', self.config['Light']['PORT'], 'off'),
+            3: relays.Relay(self, 3, 'Door Relay 1', self.config['Door']['PORT_1'], 'off'),
+            4: relays.Relay(self, 4, 'Door Relay 2', self.config['Door']['PORT_2'], 'off'),
         }
 
         self.water_heater_relay = self.relay_module[1]
@@ -143,13 +146,16 @@ class Coop(Thread):
             self,
             'Water heater',
             self.water_heater_relay,
-            self.config['Water']['HEATER_TEMP_RANGE']
+            self.config['Water']['HEATER_TEMP_RANGE'][1:3]
         )
+
         self.water_temp_sensor = sensors.WaterTempSensor(
             self,
             'Water Temp Sensor',
-            self.water_heater)
-        self.water_level_dual_sensor = sensors.HalfEmptyWaterLevelSensors(
+            self.config['Water']['HEATER_TEMP_RANGE'],
+        )
+
+        self.water_level_dual_sensor = sensors.HalfEmptyWaterLevelsSensor(
             self,
             'Water Level Dual Sensor HalfEmpty',
             self.config['Water']['SENSOR_LEVEL_TOP_PORT'],
@@ -160,22 +166,17 @@ class Coop(Thread):
         self.light = relays.Light(
             self,
             'Light',
-            self.light_relay,
-            self.sunset_sunrise
+            self.light_relay
         )
 
-        self.door_open_sensor = sensors.SwitchSensor(
+        self.door_dual_sensor = sensors.DoorDualSensor(
             self,
-            'Door Open Sensor',
+            'Door Dual Sensor',
             self.config['Door']['OPEN_SENSOR_PORT'],
-            timeout=self.config['Door']['SENSOR_TIMEOUT']
-        )
-        self.door_closed_sensor = sensors.SwitchSensor(
-            self,
-            'Door Closed Sensor',
             self.config['Door']['CLOSED_SENSOR_PORT'],
             timeout=self.config['Door']['SENSOR_TIMEOUT']
         )
+
         self.door_relays = [
             self.relay_module[3],
             self.relay_module[4]
@@ -183,23 +184,94 @@ class Coop(Thread):
         self.door = relays.Door(
             self,
             'Door',
-            self.door_relays,
-            self.sunset_sunrise,
-            self.door_open_sensor,
-            self.door_closed_sensor,
-            manual_mode=False
+            self.door_relays
         )
 
-    def run(self):
-        while True:
-            self.ambient_temp_humi_sensor.check()
-            self.water_temp_sensor.check()
-            self.water_level_dual_sensor.check()
-            self.light.check()
-            self.door.check()
-            self.status_led.on(self._convert_status_to_color(self.status))
+        self.initialized = True
 
+    def run(self):
+        if not self.initialized:
+            raise Exception('Coop sensors and relays not initialized!')
+
+        while True:
+            self.sunset_sunrise_sensor.read_and_check()
+            self.ambient_temp_humi_sensor.read_and_check()
+            self.water_temp_sensor.read_and_check()
+            self.water_level_dual_sensor.read_and_check()
+            water_empty = self.water_level_dual_sensor.state == 'empty' or \
+                          self.water_level_dual_sensor.state == 'invalid'
+            self.water_heater.check(temp=self.water_temp_sensor.temp, water_empty=water_empty)
+            self.door_dual_sensor.read_and_check()
+            self.door.check(switches=self.door_dual_sensor,
+                            sunrise_sunset=self.sunset_sunrise_sensor)
+            self.light.check(sunrise_sunset=self.sunset_sunrise_sensor)
+            self.status_led.on(self._convert_status_to_color(self.status))
             sleep(self.config['Main']['CHECK_FREQUENCY'])
+
+    def GET(self):
+        self.sunset_sunrise_sensor.get_graph().draw('static/day-night.png', prog='dot')
+        self.ambient_temp_humi_sensor.get_graph().draw('static/ambient-temp.png', prog='dot')
+        self.water_temp_sensor.get_graph().draw('static/water-temp.png', prog='dot')
+        self.water_heater.get_graph().draw('static/water-heater-mode.png', prog='dot')
+        self.water_heater_relay.get_graph().draw('static/water-heater.png', prog='dot')
+        self.door_dual_sensor.get_graph().draw('static/door-switches.png', prog='dot')
+        self.door.get_graph().draw('static/door.png', prog='dot')
+        self.water_level_dual_sensor.get_graph().draw('static/water-level.png', prog='dot')
+        html = '''<html>
+            <meta http-equiv="refresh" content="2">
+            <br>Status: {status}</br>
+            <br>Day/Night: {day_night}</br>
+            <br>Sunrise: {sunrise}</br>
+            <br>Sunset: {sunset}</br>
+            <br>Temp: {ambient_temp}</br>
+            <br>Water: {water_temp}</br>
+            <br>Water heater: {water_heater_mode} {water_heater}</br>
+            <br>Door switches: {door_switches}</br>
+            <br>Door: {door}</br>
+            <br>Water Level: {water_level}</br>
+
+            Day/Night:
+            <img src="static/day-night.png" width=400 alt="My image"/>
+
+            Ambient:
+            <img src="static/ambient-temp.png" width=400 alt="My image"/>
+
+            Door switches:
+            <img src="static/door-switches.png" width=800 alt="My image"/>
+
+            Door:
+            <img src="static/door.png" width=1800 alt="My image"/>
+
+            <br></br>
+
+            Water Temp:
+            <img src="static/water-temp.png" width=600 alt="My image"/>
+
+            Water Heater Mode:
+            <img src="static/water-heater-mode.png" width=600 alt="My image"/>
+
+            Water Heater:
+            <img src="static/water-heater.png" width=600 alt="My image"/>
+
+            <br></br>
+
+            Water Level:
+            <img src="static/water-level.png" width=600 alt="My image"/>
+            </html>
+        '''.format(
+            status='',
+            day_night=self.sunset_sunrise_sensor.state,
+            sunrise=self.sunset_sunrise_sensor.get_sunrise(),
+            sunset=self.sunset_sunrise_sensor.get_sunset(),
+            ambient_temp=self.ambient_temp_humi_sensor.temp,
+            water_temp=self.water_temp_sensor.temp,
+            water_heater_mode=self.water_heater.state,
+            water_heater=self.water_heater_relay.state,
+            door_switches=self.door_dual_sensor.state,
+            door=self.door.state,
+            water_level=self.water_level_dual_sensor.state
+        )
+        return html
 
     def shutdown(self):
         log.info('Resetting relays...')
@@ -210,29 +282,66 @@ class Coop(Thread):
 
     @property
     def status(self):
-        s = self.notifier_manager.status
-        log.info('Coop status: {}'.format(notifications.Notification.severity_text(s)))
-        return s
+        error = False
+        warn = False
+        manual = False
+
+        if self.sunset_sunrise_sensor.state == 'invalid':
+            warn = True
+        if self.ambient_temp_humi_sensor.state in ['temp_low', 'temp_high', 'temp_invalid']:
+            warn = True
+        if 'error' in self.ambient_temp_humi_sensor.state:
+            error = True
+        if self.water_temp_sensor.state in ['temp_invalid', 'temp_error_low', 'temp_error_high']:
+            error = True
+        if self.water_level_dual_sensor.state == 'half':
+            warn = True
+        elif self.water_level_dual_sensor.state in ['empty', 'invalid']:
+            error = True
+        if 'manual' in self.water_heater.state:
+            manual = True
+        if self.door_dual_sensor.state == 'invalid':
+            warn = True
+        if 'manual' in self.door.state:
+            manual = True
+        if self.door.state in ['manual-invalid', 'manual-closed-day', 'manual-open-night']:
+            error = True
+        if 'manual' in self.light.state:
+            manual = True
+
+        if error:
+            return 'ERROR'
+        elif warn:
+            return 'WARN'
+        elif manual:
+            return 'MANUAL'
+        else:
+            return 'OK'
 
     @staticmethod
     def _convert_status_to_color(status):
-        return 'red' if status == notifications.Notification.ERROR else \
-               'white' if status == notifications.Notification.MANUAL else \
-               'blue' if status == notifications.Notification.WARN else \
+        return 'red' if status == 'ERROR' else \
+               'blue' if status == 'WARN' else \
+               'white' if status == 'MANUAL' else \
                'green'
 
-    def notifier_callback(self, **kwargs):
-        severity = kwargs['notification'].severity
+    def notifier_callback(self, notification):
+        severity = notification.severity
         if self.config['Notifications']['LOG']:
-            if severity >= notifications.Notification.severity_levels[self.config['Notifications']['LOG_THRESHOLD']]:
-                self.log_callback(**kwargs)
+            if Notification.severity_levels[severity] >= \
+                    Notification.severity_levels[self.config['Notifications']['LOG_THRESHOLD']]:
+                self.log_callback(notification)
         if self.config['Notifications']['EMAIL']:
-            if severity >= notifications.Notification.severity_levels[self.config['Notifications']['EMAIL_THRESHOLD']]:
-                kwargs['gmail_credentials'] = {
-                    'email': self.config['Notifications']['EMAIL_FROM'],
-                    'password': self.config['Notifications']['EMAIL_PASSWORD'],
+            if Notification.severity_levels[severity] >= \
+                    Notification.severity_levels[self.config['Notifications']['EMAIL_THRESHOLD']]:
+                kwargs = {
+                    'gmail_credentials': {
+                        'email': self.config['Notifications']['EMAIL_FROM'],
+                        'password': self.config['Notifications']['EMAIL_PASSWORD'],
+                    },
+                    'emails_to': self.config['Notifications']['EMAILS_TO'],
+                    'message': notification.message
                 }
-                kwargs['emails_to'] = self.config['Notifications']['EMAILS_TO']
                 self.email_callback(**kwargs)
 
     @staticmethod
@@ -255,14 +364,11 @@ Subject: {subject}
         gmail.quit()
 
     @staticmethod
-    def log_callback(**kwargs):
-        notification = kwargs['notification']
-        log_message = '[{}] {}: {}'.format(notifications.Notification.severity_text(notification.severity),
-                                           notification.type,
-                                           kwargs['message'])
-        if notification.severity == notification.INFO:
+    def log_callback(notification):
+        log_message = '{}: {}'.format(notification.severity, notification.message)
+        if notification.severity == 'INFO':
             log.info(log_message)
-        elif notification.severity == notification.WARN:
+        elif notification.severity == 'WARN':
             log.warning(log_message)
-        elif notification.severity == notification.ERROR:
+        elif notification.severity == 'ERROR':
             log.error(log_message)

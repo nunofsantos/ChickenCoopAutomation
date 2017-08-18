@@ -2,4 +2,6 @@ Adafruit_DHT
 arrow
 requests
 RPi
+transitions
 w1thermsensor
+web
