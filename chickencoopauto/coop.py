@@ -6,6 +6,7 @@ from time import sleep
 
 import Adafruit_DHT as DHT  # noqa: N814
 import RPi.GPIO as GPIO
+import web
 
 import led
 from notifications import Notification
@@ -25,6 +26,7 @@ class Coop(Thread, utils.Singleton):
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
         self.config = self._read_config()
+        self.render = web.template.render('templates')
 
     @staticmethod
     def _read_config():
@@ -207,71 +209,6 @@ class Coop(Thread, utils.Singleton):
             self.light.check(sunrise_sunset=self.sunset_sunrise_sensor)
             self.status_led.on(self._convert_status_to_color(self.status))
             sleep(self.config['Main']['CHECK_FREQUENCY'])
-
-    def GET(self):
-        self.sunset_sunrise_sensor.get_graph().draw('static/day-night.png', prog='dot')
-        self.ambient_temp_humi_sensor.get_graph().draw('static/ambient-temp.png', prog='dot')
-        self.water_temp_sensor.get_graph().draw('static/water-temp.png', prog='dot')
-        self.water_heater.get_graph().draw('static/water-heater-mode.png', prog='dot')
-        self.water_heater_relay.get_graph().draw('static/water-heater.png', prog='dot')
-        self.door_dual_sensor.get_graph().draw('static/door-switches.png', prog='dot')
-        self.door.get_graph().draw('static/door.png', prog='dot')
-        self.water_level_dual_sensor.get_graph().draw('static/water-level.png', prog='dot')
-        html = '''<html>
-            <meta http-equiv="refresh" content="2">
-            <br>Status: {status}</br>
-            <br>Day/Night: {day_night}</br>
-            <br>Sunrise: {sunrise}</br>
-            <br>Sunset: {sunset}</br>
-            <br>Temp: {ambient_temp}</br>
-            <br>Water: {water_temp}</br>
-            <br>Water heater: {water_heater_mode} {water_heater}</br>
-            <br>Door switches: {door_switches}</br>
-            <br>Door: {door}</br>
-            <br>Water Level: {water_level}</br>
-
-            Day/Night:
-            <img src="static/day-night.png" width=400 alt="My image"/>
-
-            Ambient:
-            <img src="static/ambient-temp.png" width=400 alt="My image"/>
-
-            Door switches:
-            <img src="static/door-switches.png" width=800 alt="My image"/>
-
-            Door:
-            <img src="static/door.png" width=1800 alt="My image"/>
-
-            <br></br>
-
-            Water Temp:
-            <img src="static/water-temp.png" width=600 alt="My image"/>
-
-            Water Heater Mode:
-            <img src="static/water-heater-mode.png" width=600 alt="My image"/>
-
-            Water Heater:
-            <img src="static/water-heater.png" width=600 alt="My image"/>
-
-            <br></br>
-
-            Water Level:
-            <img src="static/water-level.png" width=600 alt="My image"/>
-            </html>
-        '''.format(
-            status='',
-            day_night=self.sunset_sunrise_sensor.state,
-            sunrise=self.sunset_sunrise_sensor.get_sunrise(),
-            sunset=self.sunset_sunrise_sensor.get_sunset(),
-            ambient_temp=self.ambient_temp_humi_sensor.temp,
-            water_temp=self.water_temp_sensor.temp,
-            water_heater_mode=self.water_heater.state,
-            water_heater=self.water_heater_relay.state,
-            door_switches=self.door_dual_sensor.state,
-            door=self.door.state,
-            water_level=self.water_level_dual_sensor.state
-        )
-        return html
 
     def shutdown(self):
         log.info('Resetting relays...')

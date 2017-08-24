@@ -125,15 +125,15 @@ class SingleRelayOperatedObject(Machine):
             },
             {
                 'trigger': 'check',
-                'source': 'manual',
+                'source': ['manual', 'manual-off'],
                 'dest': 'manual-on',
-                'conditions': self.is_off,
+                'conditions': self.is_on,
             },
             {
                 'trigger': 'check',
-                'source': 'manual',
+                'source': ['manual', 'manual-on'],
                 'dest': 'manual-off',
-                'conditions': self.is_on,
+                'conditions': self.is_off,
             },
         ]
         super(SingleRelayOperatedObject, self).__init__(
@@ -145,18 +145,18 @@ class SingleRelayOperatedObject(Machine):
             send_event=True
         )
 
-    def is_auto_go_on(self, event):
+    def is_auto_go_on(self, event=None):
         # must be implemented in subclass
         pass
 
-    def is_auto_go_off(self, event):
+    def is_auto_go_off(self, event=None):
         # must be implemented in subclass
         pass
 
-    def is_on(self, event):
+    def is_on(self, event=None):
         return self.relay.state == 'on'
 
-    def is_off(self, event):
+    def is_off(self, event=None):
         return self.relay.state == 'off'
 
     def is_auto_mode(self):
@@ -165,7 +165,7 @@ class SingleRelayOperatedObject(Machine):
     def is_manual_mode(self):
         return 'manual' in self.state
 
-    def notify_auto(self, event):
+    def notify_auto(self, event=None):
         self.coop.notifier_callback(
             Notification('INFO',
                          '{name} is back to automatic mode',
@@ -179,7 +179,7 @@ class SingleRelayOperatedObject(Machine):
                          name=self.name)
         )
 
-    def turn_on(self, event):
+    def turn_on(self, event=None):
         self.relay.turn_on()
         self.coop.notifier_callback(
             Notification('INFO',
@@ -188,7 +188,7 @@ class SingleRelayOperatedObject(Machine):
                          auto=('' if self.is_manual_mode() else ' automatically'))
         )
 
-    def turn_off(self, event):
+    def turn_off(self, event=None):
         self.relay.turn_off()
         self.coop.notifier_callback(
             Notification('INFO',
@@ -208,14 +208,14 @@ class WaterHeater(SingleRelayOperatedObject):
             relay
         )
 
-    def is_auto_go_on(self, event):
+    def is_auto_go_on(self, event=None):
         temp = event.kwargs.get('temp', None)
         water_empty = event.kwargs.get('water_empty', None)
         return (not water_empty and
                 temp is not None and
                 temp < self.temp_range[0])
 
-    def is_auto_go_off(self, event):
+    def is_auto_go_off(self, event=None):
         temp = event.kwargs.get('temp', None)
         water_empty = event.kwargs.get('water_empty', None)
         return (water_empty or
@@ -234,11 +234,11 @@ class Light(SingleRelayOperatedObject):
             relay
         )
 
-    def is_auto_go_on(self, event):
+    def is_auto_go_on(self, event=None):
         sunrise_sunset = event.kwargs.get('sunrise_sunset', None)
         return sunrise_sunset is not None and sunrise_sunset.go_night()
 
-    def is_auto_go_off(self, event):
+    def is_auto_go_off(self, event=None):
         sunrise_sunset = event.kwargs.get('sunrise_sunset', None)
         return sunrise_sunset is not None and sunrise_sunset.go_day()
 
@@ -318,6 +318,16 @@ class Door(MultiRelayOperatedObject):
                 'after': self.notify_auto,
             },
             {
+                'trigger': 'set_auto',
+                'source': [
+                    'auto',
+                    'auto-open-day',
+                    'auto-closed-night'
+                ],
+                'dest': '=',
+                'conditions': self.is_not_invalid,
+            },
+            {
                 'trigger': 'check',
                 'source': 'auto',
                 'dest': 'auto-open-day',
@@ -354,6 +364,18 @@ class Door(MultiRelayOperatedObject):
                 ],
                 'dest': 'manual',
                 'after': self.notify_manual
+            },
+            {
+                'trigger': 'set_manual',
+                'source': [
+                    'manual',
+                    'manual-open-day',
+                    'manual-closed-day',
+                    'manual-open-night',
+                    'manual-closed-night',
+                    'manual-invalid',
+                ],
+                'dest': '=',
             },
             {
                 'trigger': 'check',
