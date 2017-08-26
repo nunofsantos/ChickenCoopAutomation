@@ -191,23 +191,27 @@ class Coop(Thread, utils.Singleton):
 
         self.initialized = True
 
+    def check(self):
+        self.sunset_sunrise_sensor.read_and_check()
+        self.water_temp_sensor.read_and_check()
+        self.water_level_dual_sensor.read_and_check()
+        water_empty = self.water_level_dual_sensor.state == 'empty' or \
+                      self.water_level_dual_sensor.state == 'invalid'
+        self.water_heater.check(temp=self.water_temp_sensor.temp, water_empty=water_empty)
+        self.door_dual_sensor.read_and_check()
+        self.door.check(switches=self.door_dual_sensor,
+                        sunrise_sunset=self.sunset_sunrise_sensor)
+        self.light.check(sunrise_sunset=self.sunset_sunrise_sensor)
+        self.status_led.on(self._convert_status_to_color(self.status))
+
     def run(self):
         if not self.initialized:
             raise Exception('Coop sensors and relays not initialized!')
 
         while True:
-            self.sunset_sunrise_sensor.read_and_check()
+            # this takes a while, so don't do it inside coop.check()
             self.ambient_temp_humi_sensor.read_and_check()
-            self.water_temp_sensor.read_and_check()
-            self.water_level_dual_sensor.read_and_check()
-            water_empty = self.water_level_dual_sensor.state == 'empty' or \
-                          self.water_level_dual_sensor.state == 'invalid'
-            self.water_heater.check(temp=self.water_temp_sensor.temp, water_empty=water_empty)
-            self.door_dual_sensor.read_and_check()
-            self.door.check(switches=self.door_dual_sensor,
-                            sunrise_sunset=self.sunset_sunrise_sensor)
-            self.light.check(sunrise_sunset=self.sunset_sunrise_sensor)
-            self.status_led.on(self._convert_status_to_color(self.status))
+            self.check()
             sleep(self.config['Main']['CHECK_FREQUENCY'])
 
     def shutdown(self):

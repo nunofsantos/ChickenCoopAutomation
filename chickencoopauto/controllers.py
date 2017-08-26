@@ -1,3 +1,4 @@
+from arrow import now
 from transitions.core import EventData
 import web
 
@@ -18,13 +19,18 @@ class coop_get_status():
         # coop.door_dual_sensor.get_graph().draw('static/door-switches.png', prog='dot')
         # coop.door.get_graph().draw('static/door.png', prog='dot')
         # coop.water_level_dual_sensor.get_graph().draw('static/water-level.png', prog='dot')
+        coop.check()
         return render.index(
             coop.status,
+            now().format('MMMM DD, hh:mm a'),
             coop.sunset_sunrise_sensor.state,
-            coop.sunset_sunrise_sensor.get_sunrise(),
-            coop.sunset_sunrise_sensor.get_sunset(),
-            coop.ambient_temp_humi_sensor.temp,
-            coop.water_temp_sensor.temp,
+            coop.sunset_sunrise_sensor.get_sunrise().format('MMMM DD, hh:mm a'),
+            coop.sunset_sunrise_sensor.get_sunset().format('MMMM DD, hh:mm a'),
+            coop.ambient_temp_humi_sensor.state,
+            '{0:.1f}'.format(coop.ambient_temp_humi_sensor.temp)
+                if isinstance(coop.ambient_temp_humi_sensor.temp, float)
+                else '???',
+            '{0:.1f}'.format(coop.water_temp_sensor.temp),
             coop.water_heater.state,
             coop.water_heater_relay.state,
             coop.door_dual_sensor.state,
