@@ -197,6 +197,12 @@ class SingleRelayOperatedObject(Machine):
                          auto=('' if self.is_manual_mode() else ' automatically'))
         )
 
+    def status(self):
+        if 'manual' in self.state:
+            return 'MANUAL'
+        else:
+            return 'OK'
+
 
 class WaterHeater(SingleRelayOperatedObject):
     def __init__(self, coop, name, relay, temp_range):
@@ -286,6 +292,9 @@ class MultiRelayOperatedObject(Machine):
 
     def turn_off(self, relay_num):
         self.relays[relay_num].turn_off()
+
+    def status(self):
+        pass
 
 
 class Door(MultiRelayOperatedObject):
@@ -569,3 +578,22 @@ class Door(MultiRelayOperatedObject):
                          '{name} is in invalid state, set to manual mode',
                          name=self.name)
         )
+
+    def status(self):
+        error = False
+        warn = False
+        manual = False
+
+        if 'manual' in self.state:
+            manual = True
+        if self.state in ['manual-invalid', 'manual-closed-day', 'manual-open-night']:
+            error = True
+
+        if error:
+            return 'ERROR'
+        elif warn:
+            return 'WARN'
+        elif manual:
+            return 'MANUAL'
+        else:
+            return 'OK'

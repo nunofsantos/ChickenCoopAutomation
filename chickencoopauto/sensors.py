@@ -197,6 +197,25 @@ class TempSensor(Sensor):
                          mini=self.temp_error_low)
         )
 
+    def status(self):
+        error = False
+        warn = False
+        manual = False
+
+        if self.state in ['temp_low', 'temp_high', 'temp_invalid']:
+            warn = True
+        if 'error' in self.state:
+            error = True
+
+        if error:
+            return 'ERROR'
+        elif warn:
+            return 'WARN'
+        elif manual:
+            return 'MANUAL'
+        else:
+            return 'OK'
+
 
 class AmbientTempHumiSensor(TempSensor):
     def __init__(self, coop, name, sensor, port, temp_range, humi_range, cache_mins):
@@ -466,6 +485,25 @@ class HalfEmptyWaterLevelsSensor(Sensor):
                          name=self.name)
         )
 
+    def status(self):
+        error = False
+        warn = False
+        manual = False
+
+        if self.state == 'half':
+            warn = True
+        elif self.state in ['empty', 'invalid']:
+            error = True
+
+        if error:
+            return 'ERROR'
+        elif warn:
+            return 'WARN'
+        elif manual:
+            return 'MANUAL'
+        else:
+            return 'OK'
+
 
 class DoorDualSensor(Sensor):
     def __init__(self, coop, name, port_top, port_bottom, timeout=10000):
@@ -564,6 +602,23 @@ class DoorDualSensor(Sensor):
         #                  name=self.name)
         # )
         log.info('{name} is in invalid state'.format(name=self.name))
+
+    def status(self):
+        error = False
+        warn = False
+        manual = False
+
+        if self.state == 'invalid':
+            warn = True
+
+        if error:
+            return 'ERROR'
+        elif warn:
+            return 'WARN'
+        elif manual:
+            return 'MANUAL'
+        else:
+            return 'OK'
 
 
 class SunriseSunsetSensor(Sensor):
@@ -722,3 +777,20 @@ class SunriseSunsetSensor(Sensor):
 
     def set_extra_min_sunset(self, extra_min):
         self.extra_min_sunset = extra_min
+
+    def status(self):
+        error = False
+        warn = False
+        manual = False
+
+        if self.state == 'invalid':
+            warn = True
+
+        if error:
+            return 'ERROR'
+        elif warn:
+            return 'WARN'
+        elif manual:
+            return 'MANUAL'
+        else:
+            return 'OK'

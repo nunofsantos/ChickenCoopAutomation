@@ -221,43 +221,32 @@ class Coop(Thread, utils.Singleton):
         self.status_led.reset()
         GPIO.cleanup()
 
-    @property
-    def status(self):
-        error = False
-        warn = False
-        manual = False
-
-        if self.sunset_sunrise_sensor.state == 'invalid':
-            warn = True
-        if self.ambient_temp_humi_sensor.state in ['temp_low', 'temp_high', 'temp_invalid']:
-            warn = True
-        if 'error' in self.ambient_temp_humi_sensor.state:
-            error = True
-        if self.water_temp_sensor.state in ['temp_invalid', 'temp_error_low', 'temp_error_high']:
-            error = True
-        if self.water_level_dual_sensor.state == 'half':
-            warn = True
-        elif self.water_level_dual_sensor.state in ['empty', 'invalid']:
-            error = True
-        if 'manual' in self.water_heater.state:
-            manual = True
-        if self.door_dual_sensor.state == 'invalid':
-            warn = True
-        if 'manual' in self.door.state:
-            manual = True
-        if self.door.state in ['manual-invalid', 'manual-closed-day', 'manual-open-night']:
-            error = True
-        if 'manual' in self.light.state:
-            manual = True
-
-        if error:
+    @staticmethod
+    def max_status_level(status_list):
+        if 'ERROR' in status_list:
             return 'ERROR'
-        elif warn:
+        elif 'WARN' in status_list:
             return 'WARN'
-        elif manual:
+        elif 'MANUAL' in status_list:
             return 'MANUAL'
         else:
             return 'OK'
+
+    @property
+    def status(self):
+        components_status = []
+
+        for component in [self.sunset_sunrise_sensor,
+                          self.ambient_temp_humi_sensor,
+                          self.water_temp_sensor,
+                          self.water_level_dual_sensor,
+                          self.water_heater,
+                          self.door_dual_sensor,
+                          self.door,
+                          self.light]:
+            components_status.append(component.status())
+
+        return self.max_status_level(components_status)
 
     @staticmethod
     def _convert_status_to_color(status):

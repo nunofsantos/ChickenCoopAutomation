@@ -1,4 +1,4 @@
-$def with (status, time, day_night, sunrise, sunset, ambient_temp_state, ambient_temp, water_temp, water_heater_mode, water_heater, door_switches, door, water_level, light)
+$def with (status, time, day_night, day_night_status, sunrise, sunset, ambient_temp_state, ambient_temp_status, ambient_temp, water_temp, water_heater_mode, water_heater_status, water_heater, door_switches, door, door_status, water_level, water_level_status, light, light_status)
 
 $code:
     def get_on_off(state, reverse=False):
@@ -48,15 +48,15 @@ $code:
       else:
           return 'error'
 
-    def get_status_color(status):
+    def get_status_color(status, output_string=True):
       if status == 'ERROR':
-        return 'red'
+        return 'red' if output_string else '[1,0,0,1]'
       elif status == 'WARN':
-        return 'blue'
+        return 'blue' if output_string else '[0,0,1,1]'
       elif status == 'OK':
-        return 'green'
+        return 'green' if output_string else '[0,1,0,1]'
       elif status == 'MANUAL':
-        return 'yellow'
+        return 'yellow' if output_string else '[0.2,1,1,1]'
 
 
 <!DOCTYPE html>
@@ -103,31 +103,68 @@ x.prototype.attachedCallback=function(){var f=this.getContext("2d"),b=this.width
 var y=function(f,b,g,c,a){var d=.5*c,h=.5*a,e=[b,b],k=f.tlRadius,l=f.trRadius,p=f.blRadius;f=f.brRadius;d=d<h?d:h;k>d&&(k=d);p>d&&(p=d);f>d&&(f=d);l>d&&(l=d);d=c-b;h=a-b;0>=k&&0>=p&&0>=f&&0>=l?g.rect(e[0],e[1],c-2*b,a-2*b):(c=k-b,0>c&&(c=0),e[1]+=c,.001>Math.abs(c)&&(e[1]=b),g.moveTo(e[0],e[1]),e=[b,h],c=p-b,0>c&&(c=0),e[1]-=c,g.lineTo(e[0],e[1]),.001<c&&g.arcTo(b,h,b+c,h,p-b),e=[d,h],c=f-b,0>c&&(c=0),e[0]-=c,g.lineTo(e[0],e[1]),.001<c&&g.arcTo(d,h,d,h-c,f-b),e=[d,b],c=l-b,0>c&&(c=0),e[1]+=c,g.lineTo(e[0],
 e[1]),.001<c&&g.arcTo(d,b,d-c,b,l-b),e=[b,b],c=k-b,0>c&&(c=0),e[0]+=c,g.lineTo(e[0],e[1]),.001<c?g.arcTo(b,b,b,b+c,k-b):g.lineTo(b,2*b))};document.registerElement("gwd-rectangle",{prototype:x.prototype,"extends":"canvas"});}).call(this);
 </script>
+
+<script type="text/javascript" src="/static/spin.js"></script>
+
+<script type="text/javascript">
+    var loading_spinner = function(link_href) {
+        var opts = {
+            lines: 13 // The number of lines to draw
+            , length: 28 // The length of each line
+            , width: 14 // The line thickness
+            , radius: 42 // The radius of the inner circle
+            , scale: 1 // Scales overall size of the spinner
+            , corners: 1 // Corner roundness (0..1)
+            , color: '#000000' // #rgb or #rrggbb or array of colors
+            , opacity: 0.5 // Opacity of the lines
+            , rotate: 0 // The rotation offset
+            , direction: 1 // 1: clockwise, -1: counterclockwise
+            , speed: 1 // Rounds per second
+            , trail: 60 // Afterglow percentage
+            , fps: 20 // Frames per second when using setTimeout() as a fallback for CSS
+            , zIndex: 2e9 // The z-index (defaults to 2000000000)
+            , className: 'spinner' // The CSS class to assign to the spinner
+            , top: '50%' // Top position relative to parent
+            , left: '50%' // Left position relative to parent
+            , shadow: false // Whether to render a shadow
+            , hwaccel: false // Whether to use hardware acceleration
+            , position: 'absolute' // Element positioning
+        };
+        var target = document.getElementById('loading');
+        target.setAttribute('style','width:100%;height:100%;position:absolute;top:0px;left:0px;z-index:9999;background-color:#dddddd;opacity:0.5;');
+        var spinner = new Spinner(opts).spin(target);
+        window.location.href = link_href
+    }
+</script>
+
 </head>
 
 <body class="htmlNoPages">
 
-  <canvas is="gwd-rectangle" width="463" height="150" class="gwd-canvas-10e0" x-off="0" y-off="0" stroke-width="2" stroke-color="[0,0,0,1]" fill-color="null" tl-radius="15" tr-radius="15" bl-radius="15" br-radius="15" stroke-style="Solid"></canvas>
-  <canvas is="gwd-rectangle" width="463" height="150" class="gwd-canvas-10e0 gwd-canvas-11o2" x-off="0" y-off="0" stroke-width="2" stroke-color="[0,0,0,1]" fill-color="null" tl-radius="15" tr-radius="15" bl-radius="15" br-radius="15" stroke-style="Solid"></canvas>
-  <canvas is="gwd-rectangle" width="463" height="150" class="gwd-canvas-10e0 gwd-canvas-11o2 gwd-canvas-14x6" x-off="0" y-off="0" stroke-width="2" stroke-color="[0,0,0,1]" fill-color="null" tl-radius="15" tr-radius="15" bl-radius="15" br-radius="15" stroke-style="Solid"></canvas>
-  <canvas is="gwd-rectangle" width="463" height="150" class="gwd-canvas-10e0 gwd-canvas-11o2 gwd-canvas-14x6 gwd-canvas-13v3" x-off="0" y-off="0" stroke-width="2" stroke-color="[0,0,0,1]" fill-color="null" tl-radius="15" tr-radius="15" bl-radius="15" br-radius="15" stroke-style="Solid"></canvas>
-  <canvas is="gwd-rectangle" width="463" height="150" class="gwd-canvas-10e0 gwd-canvas-11o2 gwd-canvas-14x6 gwd-canvas-cqdf" x-off="0" y-off="0" stroke-width="2" stroke-color="[0,0,0,1]" fill-color="null" tl-radius="15" tr-radius="15" bl-radius="15" br-radius="15" stroke-style="Solid"></canvas>
-  <canvas is="gwd-rectangle" width="463" height="150" class="gwd-canvas-10e0 gwd-canvas-11o2 gwd-canvas-14x6 gwd-canvas-13v3 gwd-canvas-1gb3" x-off="0" y-off="0" stroke-width="2" stroke-color="[0,0,0,1]" fill-color="null" tl-radius="15" tr-radius="15" bl-radius="15" br-radius="15" stroke-style="Solid"></canvas>
+  <div id="loading"></div>
 
+  <img class="gwd-img-tusn" src="/static/chicken.png" id="chicken">
   <p class="gwd-p-1iti">Coop Controller Status:</p>
+  <p class="gwd-p-vqyh" style="color:${get_status_color(status)}">$status</p>
 
 
+  <!-- Door -->
+  <canvas is="gwd-rectangle" width="463" height="150"
+          class="gwd-canvas-10e0 gwd-canvas-11o2 gwd-canvas-14x6 gwd-canvas-13v3"
+          x-off="0" y-off="0" stroke-width="2" stroke-color="${get_status_color(door_status, output_string=False)}"
+          fill-color="null"
+          tl-radius="15" tr-radius="15" bl-radius="15" br-radius="15" stroke-style="Solid"></canvas>
   <div class="gwd-div-b5f6 gwd-gen-1b4wgwdanimation" data-gwd-group="Door">
       <img class="gwd-img-1c1q gwd-img-6r0o gwd-img-u36j gwd-grp-1pp5"
            src="/static/door-${get_open_closed(door)}-${get_ok_error(door)}.png"
            data-gwd-grp-id="door_1">
-      <a href="/Door/${get_auto_manual(door, reverse=True)}">
+      <a href="/Door/${get_auto_manual(door, reverse=True)}" onclick="loading_spinner(this.href)">
           <img class="gwd-img-irbv gwd-img-18i9 gwd-grp-1pp5"
                src="/static/${get_auto_manual(door)}.png"
                onmouseover="this.src='/static/${get_auto_manual(door, reverse=True)}.png'"
                onmouseout="this.src='/static/${get_auto_manual(door)}.png'">
       </a>
-      <a href="/Door/${get_open_closed(door, reverse=True, result_close=True)}">
+      <a href="/Door/${get_open_closed(door, reverse=True, result_close=True)}" onclick="loading_spinner(this.href)">
           <img class="gwd-img-o4gv gwd-img-vvmx gwd-grp-1pp5"
                src="/static/${get_open_closed(door, result_on_off=True)}.png"
                onmouseover="this.src='/static/${get_open_closed(door, result_on_off=True, reverse=True)}.png'"
@@ -135,18 +172,23 @@ e[1]),.001<c&&g.arcTo(d,b,d-c,b,l-b),e=[b,b],c=k-b,0>c&&(c=0),e[0]+=c,g.lineTo(e
       </a>
   </div>
 
-
-  <div class="gwd-div-yc18 gwd-gen-7ajbgwdanimation" data-gwd-group="Light">
+  <!-- Light -->
+    <canvas is="gwd-rectangle" width="463" height="150"
+            class="gwd-canvas-10e0 gwd-canvas-11o2 gwd-canvas-14x6 gwd-canvas-13v3 gwd-canvas-1gb3"
+            x-off="0" y-off="0" stroke-width="2"
+            stroke-color="${get_status_color(light_status, output_string=False)}" fill-color="null"
+            tl-radius="15" tr-radius="15" bl-radius="15" br-radius="15" stroke-style="Solid"></canvas>
+    <div class="gwd-div-yc18 gwd-gen-7ajbgwdanimation" data-gwd-group="Light">
       <img class="gwd-img-1c1q gwd-img-6r0o gwd-img-xoim gwd-img-1926 gwd-grp-k2np"
            src="/static/light-${get_on_off(light)}.png"
            data-gwd-grp-id="light">
-      <a href="/Light/${get_auto_manual(light, reverse=True)}">
+      <a href="/Light/${get_auto_manual(light, reverse=True)}" onclick="loading_spinner(this.href)">
           <img class="gwd-img-irbv gwd-img-1juf gwd-img-101l gwd-grp-k2np"
                src="/static/${get_auto_manual(light)}.png"
                onmouseover="this.src='/static/${get_auto_manual(light, reverse=True)}.png'"
                onmouseout="this.src='/static/${get_auto_manual(light)}.png'">
       </a>
-      <a href="/Light/${get_on_off(light, reverse=True)}">
+      <a href="/Light/${get_on_off(light, reverse=True)}" onclick="loading_spinner(this.href)">
           <img class="gwd-img-o4gv gwd-img-g7op gwd-img-1uaa gwd-img-1rmj gwd-grp-k2np"
                src="/static/${get_on_off(light)}.png"
                onmouseover="this.src='/static/${get_on_off(light, reverse=True)}.png'"
@@ -155,19 +197,24 @@ e[1]),.001<c&&g.arcTo(d,b,d-c,b,l-b),e=[b,b],c=k-b,0>c&&(c=0),e[0]+=c,g.lineTo(e
   </div>
 
 
+  <!-- Water heater -->
+  <canvas is="gwd-rectangle" width="463" height="150" class="gwd-canvas-10e0 gwd-canvas-11o2 gwd-canvas-14x6"
+          x-off="0" y-off="0" stroke-width="2"
+          stroke-color="${get_status_color(water_heater_status, output_string=False)}" fill-color="null"
+          tl-radius="15" tr-radius="15" bl-radius="15" br-radius="15" stroke-style="Solid"></canvas>
   <div class="gwd-div-1e77" data-gwd-group="Water_heater">
       <p class="gwd-p-1253 gwd-p-tchn gwd-p-1ifc gwd-p-1mms gwd-grp-j8vr">Water temp:</p>
       <span class="gwd-span-oir8 gwd-span-1lsv gwd-span-ugrs gwd-span-gnxw gwd-span-1hjk gwd-grp-j8vr">$water_temp</span>
       <img class="gwd-img-6r0o gwd-img-xoim gwd-img-101v gwd-img-jw11 gwd-grp-j8vr"
            src="/static/water-heater-${get_on_off(water_heater)}.png"
            data-gwd-grp-id="water_heater_1">
-      <a href="/WaterHeater/${get_auto_manual(water_heater_mode, reverse=True)}">
+      <a href="/WaterHeater/${get_auto_manual(water_heater_mode, reverse=True)}" onclick="loading_spinner(this.href)">
           <img class="gwd-img-1juf gwd-img-ea6r gwd-img-1sjr gwd-grp-j8vr"
                src="/static/${get_auto_manual(water_heater_mode)}.png"
                onmouseover="this.src='/static/${get_auto_manual(water_heater_mode, reverse=True)}.png'"
                onmouseout="this.src='/static/${get_auto_manual(water_heater_mode)}.png'">
       </a>
-      <a href="/WaterHeater/${get_on_off(water_heater, reverse=True)}">
+      <a href="/WaterHeater/${get_on_off(water_heater, reverse=True)}" onclick="loading_spinner(this.href)">
           <img class="gwd-img-g7op gwd-img-1uaa gwd-img-15ug gwd-img-dg8m gwd-grp-j8vr"
                src="/static/${get_on_off(water_heater)}.png"
                onmouseover="this.src='/static/${get_on_off(water_heater, reverse=True)}.png'"
@@ -176,9 +223,11 @@ e[1]),.001<c&&g.arcTo(d,b,d-c,b,l-b),e=[b,b],c=k-b,0>c&&(c=0),e[0]+=c,g.lineTo(e
   </div>
 
 
-  <p class="gwd-p-vqyh" style="color:${get_status_color(status)}">$status</p>
-
-
+  <!-- Sunrise / sunset -->
+  <canvas is="gwd-rectangle" width="463" height="150" class="gwd-canvas-10e0"
+          x-off="0" y-off="0" stroke-width="2"
+          stroke-color="${get_status_color(day_night_status, output_string=False)}" fill-color="null"
+          tl-radius="15" tr-radius="15" bl-radius="15" br-radius="15" stroke-style="Solid"></canvas>
   <div class="gwd-div-1j4v" data-gwd-group="sunrise-sunset">
       <img class="gwd-img-1hm9 gwd-img-1628 gwd-img-1rw2 gwd-img-107i gwd-grp-j7fz"
            src="/static/${day_night}.png"
@@ -192,6 +241,11 @@ e[1]),.001<c&&g.arcTo(d,b,d-c,b,l-b),e=[b,b],c=k-b,0>c&&(c=0),e[0]+=c,g.lineTo(e
   </div>
 
 
+  <!-- Ambient temperature -->
+  <canvas is="gwd-rectangle" width="463" height="150" class="gwd-canvas-10e0 gwd-canvas-11o2"
+          x-off="0" y-off="0" stroke-width="2"
+          stroke-color="${get_status_color(ambient_temp_status, output_string=False)}" fill-color="null"
+          tl-radius="15" tr-radius="15" bl-radius="15" br-radius="15" stroke-style="Solid"></canvas>
   <div class="gwd-div-1d4x" data-gwd-group="Ambient-tempe">
       <img class="gwd-img-1hm9 gwd-img-1628 gwd-img-1rw2 gwd-grp-zl6n"
            src="/static/thermometer-${get_low_high(ambient_temp_state)}.png"
@@ -201,6 +255,12 @@ e[1]),.001<c&&g.arcTo(d,b,d-c,b,l-b),e=[b,b],c=k-b,0>c&&(c=0),e[0]+=c,g.lineTo(e
   </div>
 
 
+  <!-- Water level -->
+  <canvas is="gwd-rectangle" width="463" height="150"
+          class="gwd-canvas-10e0 gwd-canvas-11o2 gwd-canvas-14x6 gwd-canvas-cqdf"
+          x-off="0" y-off="0" stroke-width="2"
+          stroke-color="${get_status_color(water_level_status, output_string=False)}" fill-color="null"
+          tl-radius="15" tr-radius="15" bl-radius="15" br-radius="15" stroke-style="Solid"></canvas>
   <div class="gwd-div-1li6" data-gwd-group="Water_level">
       <img class="gwd-img-1hm9 gwd-img-1t7c gwd-img-1w2f gwd-img-17k3 gwd-grp-g8p0"
            src="/static/water-level-${water_level}.png"
@@ -209,6 +269,5 @@ e[1]),.001<c&&g.arcTo(d,b,d-c,b,l-b),e=[b,b],c=k-b,0>c&&(c=0),e[0]+=c,g.lineTo(e
       <span class="gwd-span-oir8 gwd-span-120b gwd-span-1wzz gwd-span-115s gwd-span-pm70 gwd-grp-g8p0">$water_level</span>
     </div>
 
-  <img class="gwd-img-tusn" src="/static/chicken.png" id="chicken">
 
 </body></html>

@@ -24,19 +24,25 @@ class coop_get_status():
             coop.status,
             now().format('MMMM DD, hh:mm a'),
             coop.sunset_sunrise_sensor.state,
+            coop.sunset_sunrise_sensor.status(),
             coop.sunset_sunrise_sensor.get_sunrise().format('MMMM DD, hh:mm a'),
             coop.sunset_sunrise_sensor.get_sunset().format('MMMM DD, hh:mm a'),
             coop.ambient_temp_humi_sensor.state,
+            coop.ambient_temp_humi_sensor.status(),
             '{0:.1f}'.format(coop.ambient_temp_humi_sensor.temp)
                 if isinstance(coop.ambient_temp_humi_sensor.temp, float)
                 else '???',
             '{0:.1f}'.format(coop.water_temp_sensor.temp),
             coop.water_heater.state,
+            coop.max_status_level([coop.water_heater.status(), coop.water_temp_sensor.status()]),
             coop.water_heater_relay.state,
             coop.door_dual_sensor.state,
             coop.door.state,
+            coop.door.status(),
             coop.water_level_dual_sensor.state,
-            coop.light.state
+            coop.water_level_dual_sensor.status(),
+            coop.light.state,
+            coop.light.status()
         )
 
 
