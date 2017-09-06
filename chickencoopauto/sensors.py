@@ -247,10 +247,9 @@ class AmbientTempHumiSensor(TempSensor):
             log.info('Ambient humidity: {:.1f}%'.format(float(self.humi)))
         elif now > self.last.shift(minutes=self.cache_mins):
             self.humi = None
-            # self.state = 'humi_invalid'
             log.warning('Unable to get ambient humidity')
         elif self.humi:
-            log.debug('Last ambient humidity: {:.1f}%'.format(float(self.temp)))
+            log.debug('Last ambient humidity: {:.1f}%'.format(float(self.humi)))
         return self.temp
 
 

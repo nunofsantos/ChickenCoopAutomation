@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from arrow import now
 from transitions.core import EventData
 import web
@@ -29,10 +30,13 @@ class coop_get_status():
             coop.sunset_sunrise_sensor.get_sunset().format('MMMM DD, hh:mm a'),
             coop.ambient_temp_humi_sensor.state,
             coop.ambient_temp_humi_sensor.status(),
-            '{0:.1f}'.format(coop.ambient_temp_humi_sensor.temp)
+            u'{:.1f} \N{DEGREE SIGN}F'.format(coop.ambient_temp_humi_sensor.temp)
                 if isinstance(coop.ambient_temp_humi_sensor.temp, float)
                 else '???',
-            '{0:.1f}'.format(coop.water_temp_sensor.temp),
+            '{:.1f} %'.format(coop.ambient_temp_humi_sensor.humi)
+                if isinstance(coop.ambient_temp_humi_sensor.humi, float)
+                else '???',
+            u'{:.1f} \N{DEGREE SIGN}F'.format(coop.water_temp_sensor.temp),
             coop.water_heater.state,
             coop.max_status_level([coop.water_heater.status(), coop.water_temp_sensor.status()]),
             coop.water_heater_relay.state,
