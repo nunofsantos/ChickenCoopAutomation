@@ -579,27 +579,12 @@ class DoorDualSensor(Sensor):
         return self.top_sensor.state == self.bottom_sensor.state
 
     def notify_open(self):
-        # self.coop.notifier_callback(
-        #     Notification('INFO',
-        #                  '{name} is open',
-        #                  name=self.name)
-        # )
         log.info('{name} is open'.format(name=self.name))
 
     def notify_closed(self):
-        # self.coop.notifier_callback(
-        #     Notification('INFO',
-        #                  '{name} is closed',
-        #                  name=self.name)
-        # )
         log.info('{name} is closed'.format(name=self.name))
 
     def notify_invalid(self):
-        # self.coop.notifier_callback(
-        #     Notification('INFO',
-        #                  '{name} is in invalid state',
-        #                  name=self.name)
-        # )
         log.info('{name} is in invalid state'.format(name=self.name))
 
     def status(self):
@@ -631,7 +616,6 @@ class SunriseSunsetSensor(Sensor):
         self.lon = lon
         self.extra_min_sunrise = extra_min_sunrise
         self.extra_min_sunset = extra_min_sunset
-        # self.count = 0
 
         self.transition_states = [
             'day',
@@ -673,17 +657,6 @@ class SunriseSunsetSensor(Sensor):
 
     def read_sensor(self):
         now = arrow.utcnow()
-
-        # self.count += 1
-        # print '>>>>>>>>>>>>>>>>>>>>>> COUNT {}'.format(self.count)
-        # self.last = now
-        # if 3 < self.count < 6:
-        #     self.sunrise = now.shift(hours=-6)
-        #     self.sunset = now.shift(hours=-3)
-        # else:
-        #     self.sunrise = now.shift(hours=-3)
-        #     self.sunset = now.shift(hours=3)
-        # return
 
         if self.last is None or (now - self.last).days > 1:
             try:

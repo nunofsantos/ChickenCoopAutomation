@@ -242,11 +242,13 @@ class Light(SingleRelayOperatedObject):
 
     def is_auto_go_on(self, event=None):
         sunrise_sunset = event.kwargs.get('sunrise_sunset', None)
-        return sunrise_sunset is not None and sunrise_sunset.go_night()
+        # return sunrise_sunset is not None and sunrise_sunset.go_night()
+        return False
 
     def is_auto_go_off(self, event=None):
         sunrise_sunset = event.kwargs.get('sunrise_sunset', None)
-        return sunrise_sunset is not None and sunrise_sunset.go_day()
+        # return sunrise_sunset is not None and sunrise_sunset.go_day()
+        return True
 
 
 class MultiRelayOperatedObject(Machine):
