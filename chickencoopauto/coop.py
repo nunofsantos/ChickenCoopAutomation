@@ -141,6 +141,7 @@ class Coop(Thread, utils.Singleton):
             2: relays.Relay(self, 2, 'Light Relay', self.config['Light']['PORT'], 'off'),
             3: relays.Relay(self, 3, 'Door Relay 1', self.config['Door']['PORT_1'], 'off'),
             4: relays.Relay(self, 4, 'Door Relay 2', self.config['Door']['PORT_2'], 'off'),
+            5: relays.Relay(self, 5, 'Fan Relay', self.config['AmbientTempHumi']['FAN_PORT'], 'off'),
         }
 
         self.water_heater_relay = self.relay_module[1]
@@ -189,6 +190,14 @@ class Coop(Thread, utils.Singleton):
             self.door_relays
         )
 
+        self.fan_relay = self.relay_module[5]
+        self.fan = relays.Fan(
+            self,
+            'Fan',
+            self.fan_relay,
+            (self.config['AmbientTempHumi']['TEMP_MAX'] - 5.0, self.config['AmbientTempHumi']['TEMP_MAX'])
+        )
+
         self.initialized = True
 
     def check(self):
@@ -202,6 +211,7 @@ class Coop(Thread, utils.Singleton):
         self.door.check(switches=self.door_dual_sensor,
                         sunrise_sunset=self.sunset_sunrise_sensor)
         self.light.check(sunrise_sunset=self.sunset_sunrise_sensor)
+        self.fan.check(temp=self.ambient_temp_humi_sensor.temp)
         self.status_led.on(self._convert_status_to_color(self.status))
 
     def run(self):
@@ -243,7 +253,8 @@ class Coop(Thread, utils.Singleton):
                           self.water_heater,
                           self.door_dual_sensor,
                           self.door,
-                          self.light]:
+                          self.light,
+                          self.fan]:
             components_status.append(component.status())
 
         return self.max_status_level(components_status)

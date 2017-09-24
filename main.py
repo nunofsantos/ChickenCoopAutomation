@@ -20,6 +20,8 @@ urls = (
     '/Light/(on|off)', 'chickencoopauto.controllers.light_set_on_off',
     '/Door/(manual|auto)', 'chickencoopauto.controllers.door_set_mode',
     '/Door/(open|close)', 'chickencoopauto.controllers.door_open_close',
+    '/Fan/(manual|auto)', 'chickencoopauto.controllers.fan_set_mode',
+    '/Fan/(on|off)', 'chickencoopauto.controllers.fan_set_on_off',
 )
 
 if __name__ == '__main__':

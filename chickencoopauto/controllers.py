@@ -46,7 +46,9 @@ class coop_get_status():
             coop.water_level_dual_sensor.state,
             coop.water_level_dual_sensor.status(),
             coop.light.state,
-            coop.light.status()
+            coop.light.status(),
+            coop.fan.state,
+            coop.fan.status()
         )
 
 
@@ -78,6 +80,18 @@ class water_heater_set_on_off():
     def GET(self, state):
         coop = Coop()
         _single_relay_operated_object_set_on_off(coop.water_heater, state)
+
+
+class fan_set_mode():
+    def GET(self, mode):
+        coop = Coop()
+        _single_relay_operated_object_set_mode(coop.fan, mode)
+
+
+class fan_set_on_off():
+    def GET(self, state):
+        coop = Coop()
+        _single_relay_operated_object_set_on_off(coop.fan, state)
 
 
 class light_set_mode():
