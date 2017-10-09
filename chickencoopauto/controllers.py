@@ -116,7 +116,7 @@ class WaterHeaterSetOnOff(AuthenticatedUser):
 
 class FanSetMode(AuthenticatedUser):
     def GET(self, mode):
-        super(WaterHeaterSetOnOff, self).GET()
+        super(FanSetMode, self).GET()
         coop = Coop()
         _single_relay_operated_object_set_mode(coop.fan, mode)
 
