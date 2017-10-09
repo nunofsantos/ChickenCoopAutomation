@@ -33,6 +33,11 @@ class Coop(Thread, utils.Singleton):
         parser = ConfigParser.ConfigParser()
         parser.read('config.ini')
 
+        authentication_options = {
+            'USERNAME': parser.get('Authentication', 'USERNAME'),
+            'PASSWORD': parser.get('Authentication', 'PASSWORD'),
+        }
+
         main_options = {
             'CHECK_FREQUENCY': parser.getint('Main', 'CHECK_FREQUENCY'),
             'LAT': parser.getfloat('Main', 'LAT'),
@@ -58,6 +63,8 @@ class Coop(Thread, utils.Singleton):
             ],
             'TEMP_HUMI_CACHE': parser.getint('AmbientTempHumi', 'TEMP_HUMI_CACHE'),
             'SENSOR_PORT': parser.getint('AmbientTempHumi', 'SENSOR_PORT'),
+            'TEMP_FAN': parser.getfloat('AmbientTempHumi', 'TEMP_FAN'),
+            'FAN_PORT': parser.getint('AmbientTempHumi', 'FAN_PORT'),
         }
 
         light_options = {
@@ -97,6 +104,7 @@ class Coop(Thread, utils.Singleton):
         }
 
         config = {
+            'Authentication': authentication_options,
             'Main': main_options,
             'StatusLED': status_led_options,
             'AmbientTempHumi': ambient_options,
@@ -195,7 +203,7 @@ class Coop(Thread, utils.Singleton):
             self,
             'Fan',
             self.fan_relay,
-            (self.config['AmbientTempHumi']['TEMP_MAX'] - 5.0, self.config['AmbientTempHumi']['TEMP_MAX'])
+            (self.config['AmbientTempHumi']['TEMP_FAN'] - 5.0, self.config['AmbientTempHumi']['TEMP_FAN'])
         )
 
         self.initialized = True

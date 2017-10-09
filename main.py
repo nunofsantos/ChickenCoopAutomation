@@ -13,15 +13,16 @@ log.setLevel(logging.DEBUG)
 logging.getLogger('chickencoopauto').setLevel(logging.DEBUG)
 
 urls = (
-    '/', 'chickencoopauto.controllers.coop_get_status',
-    '/WaterHeater/(manual|auto)', 'chickencoopauto.controllers.water_heater_set_mode',
-    '/WaterHeater/(on|off)', 'chickencoopauto.controllers.water_heater_set_on_off',
-    '/Light/(manual|auto)', 'chickencoopauto.controllers.light_set_mode',
-    '/Light/(on|off)', 'chickencoopauto.controllers.light_set_on_off',
-    '/Door/(manual|auto)', 'chickencoopauto.controllers.door_set_mode',
-    '/Door/(open|close)', 'chickencoopauto.controllers.door_open_close',
-    '/Fan/(manual|auto)', 'chickencoopauto.controllers.fan_set_mode',
-    '/Fan/(on|off)', 'chickencoopauto.controllers.fan_set_on_off',
+    '/', 'chickencoopauto.controllers.CoopGetStatus',
+    '/login', 'chickencoopauto.controllers.Login',
+    '/WaterHeater/(manual|auto)', 'chickencoopauto.controllers.WaterHeaterSetMode',
+    '/WaterHeater/(on|off)', 'chickencoopauto.controllers.WaterHeaterSetOnOff',
+    '/Light/(manual|auto)', 'chickencoopauto.controllers.LightSetMode',
+    '/Light/(on|off)', 'chickencoopauto.controllers.LightSetOnOff',
+    '/Door/(manual|auto)', 'chickencoopauto.controllers.DoorSetMode',
+    '/Door/(open|close)', 'chickencoopauto.controllers.DoorOpenClose',
+    '/Fan/(manual|auto)', 'chickencoopauto.controllers.FanSetMode',
+    '/Fan/(on|off)', 'chickencoopauto.controllers.FanSetOnOff',
 )
 
 if __name__ == '__main__':

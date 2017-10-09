@@ -269,6 +269,31 @@ class WaterTempSensor(TempSensor):
         log.info('Water temp: {:.1f}'.format(float(self.temp)))
         return self.temp
 
+    def notify_temp_high(self):
+        pass
+
+    def notify_temp_error_high(self):
+        super(WaterTempSensor, self).notify_temp_high()
+
+    def status(self):
+        error = False
+        warn = False
+        manual = False
+
+        if self.state in ['temp_low', 'temp_error_high', 'temp_invalid']:
+            warn = True
+        if self.state in ['temp_error_low']:
+            error = True
+
+        if error:
+            return 'ERROR'
+        elif warn:
+            return 'WARN'
+        elif manual:
+            return 'MANUAL'
+        else:
+            return 'OK'
+
 
 class SwitchSensor(Sensor):
     def __init__(self, coop, name, port, timeout=10000):

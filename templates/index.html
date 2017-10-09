@@ -25,7 +25,7 @@ $code:
       else:
           return 'invalid'
 
-    def get_open_closed(state, result_on_off=False, result_close=False, reverse=False):
+    def get_open_closed(state, result_on_off=False, result_close=False, reverse=False, no_invalid=False):
       if result_on_off:
           result_on = 'on'
           result_off = 'off'
@@ -39,6 +39,8 @@ $code:
           return result_on if not reverse else result_off
       elif 'closed' in state:
           return result_off if not reverse else result_on
+      elif no_invalid:
+          return result_off
       else:
           return 'invalid'
 
@@ -164,9 +166,10 @@ e[1]),.001<c&&g.arcTo(d,b,d-c,b,l-b),e=[b,b],c=k-b,0>c&&(c=0),e[0]+=c,g.lineTo(e
                onmouseover="this.src='/static/${get_auto_manual(door, reverse=True)}.png'"
                onmouseout="this.src='/static/${get_auto_manual(door)}.png'">
       </a>
-      <a href="/Door/${get_open_closed(door, reverse=True, result_close=True)}" onclick="loading_spinner(this.href)">
+      <a href="/Door/${get_open_closed(door, reverse=True, result_close=True, no_invalid=True)}"
+         onclick="loading_spinner(this.href)">
           <img class="gwd-img-o4gv gwd-img-vvmx gwd-grp-1pp5"
-               src="/static/${get_open_closed(door, result_on_off=True)}.png"
+               src="/static/${get_open_closed(door, result_on_off=True, no_invalid=True)}.png"
                onmouseover="this.src='/static/${get_open_closed(door, result_on_off=True, reverse=True)}.png'"
                onmouseout="this.src='/static/${get_open_closed(door, result_on_off=True)}.png'">
       </a>
