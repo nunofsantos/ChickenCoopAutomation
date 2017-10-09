@@ -17,6 +17,8 @@ HUMI_MIN = 30.0
 HUMI_MAX = 90.0
 TEMP_HUMI_CACHE = 30
 SENSOR_PORT = 21
+TEMP_FAN = 80.0
+FAN_PORT = 21
 
 [Light]
 PORT = 22
@@ -47,3 +49,7 @@ EMAIL_THRESHOLD = ERROR
 EMAILS_TO = a@example.com,b@example.com
 EMAIL_FROM = from@example.com
 EMAIL_PASSWORD = from-password
+
+[Authentication]
+USERNAME = username
+PASSWORD = password
