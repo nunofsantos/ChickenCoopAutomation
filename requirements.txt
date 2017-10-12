@@ -1,7 +1,7 @@
-Adafruit_DHT
-arrow
-requests
-RPi
-transitions
-w1thermsensor
-web
+Adafruit-DHT==1.3.2
+arrow==0.10.0
+requests==2.18.4
+RPi.GPIO==0.6.3
+transitions==0.6.1
+w1thermsensor==1.0.3
+web.py==0.38

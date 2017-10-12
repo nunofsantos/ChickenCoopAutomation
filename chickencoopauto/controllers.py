@@ -6,50 +6,52 @@ from arrow import now
 from transitions.core import EventData
 import web
 
-from chickencoopauto.coop import Coop
+from coop import Coop
+from notifications import Notification
 
 
 render = web.template.render('templates')
 
 
+def validate_user(auth, notify=False):
+    if not auth:
+        return False
+    auth = sub('^Basic ', '', auth)
+    username, password = decodestring(auth).split(':')
+    coop = Coop()
+    if username == coop.config['Authentication']['USERNAME'] \
+       and password == coop.config['Authentication']['PASSWORD']:
+        return True
+    else:
+        if notify:
+            coop.notifier_callback(
+                Notification('WARN',
+                             'Failed login attempt: username={username}, password={password}',
+                             username=username,
+                             password=password)
+            )
+        return False
+
+
 class AuthenticatedUser(object):
-    def GET(self):
-        if not web.ctx.env.get('HTTP_AUTHORIZATION'):
+    def GET(self, *args, **kwargs):
+        if not validate_user(web.ctx.env.get('HTTP_AUTHORIZATION')):
             raise web.seeother('/login')
+
 
 class Login(object):
     def GET(self):
-        auth = web.ctx.env.get('HTTP_AUTHORIZATION')
-        auth_required = False
-        if auth is None:
-            auth_required = True
+        if validate_user(web.ctx.env.get('HTTP_AUTHORIZATION'), notify=True):
+            raise web.seeother('/')
         else:
-            auth = sub('^Basic ', '', auth)
-            username, password = decodestring(auth).split(':')
-            coop = Coop()
-            if username == coop.config['Authentication']['USERNAME'] \
-               and password == coop.config['Authentication']['PASSWORD']:
-                raise web.seeother('/')
-            else:
-                auth_required = True
-        if auth_required:
             web.header('WWW-Authenticate', 'Basic realm="Authentication"')
             web.ctx.status = '401 Unauthorized'
-            return
 
 
 class CoopGetStatus(AuthenticatedUser):
     def GET(self):
         super(CoopGetStatus, self).GET()
         coop = Coop()
-        # coop.sunset_sunrise_sensor.get_graph().draw('static/day-night.png', prog='dot')
-        # coop.ambient_temp_humi_sensor.get_graph().draw('static/ambient-temp.png', prog='dot')
-        # coop.water_temp_sensor.get_graph().draw('static/water-temp.png', prog='dot')
-        # coop.water_heater.get_graph().draw('static/water-heater-mode.png', prog='dot')
-        # coop.water_heater_relay.get_graph().draw('static/water-heater.png', prog='dot')
-        # coop.door_dual_sensor.get_graph().draw('static/door-switches.png', prog='dot')
-        # coop.door.get_graph().draw('static/door.png', prog='dot')
-        # coop.water_level_dual_sensor.get_graph().draw('static/water-level.png', prog='dot')
         coop.check()
         return render.index(
             coop.status,

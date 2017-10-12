@@ -9,7 +9,7 @@ from requests.exceptions import RequestException
 import RPi.GPIO as GPIO
 from w1thermsensor import W1ThermSensor
 
-from transitions.extensions import GraphMachine as Machine
+from transitions import Machine
 
 from notifications import Notification
 
@@ -230,7 +230,7 @@ class AmbientTempHumiSensor(TempSensor):
 
     def read_sensor(self):
         now = arrow.utcnow()
-        humi, temp = DHT.read_retry(self.sensor, self.port, retries=3, delay_seconds=2)
+        humi, temp = DHT.read_retry(self.sensor, self.port, retries=3, delay_seconds=5)
         if temp:
             self.temp = float(temp) * 1.8 + 32.0
             self.last = now
@@ -238,7 +238,7 @@ class AmbientTempHumiSensor(TempSensor):
         elif now > self.last.shift(minutes=self.cache_mins):
             self.temp = None
             self.state = 'temp_invalid'
-            log.warning('Unable to get ambient temperature')
+            log.debug('Unable to get ambient temperature')
         elif self.temp:
             log.debug('Last ambient temperature: {:.1f}'.format(float(self.temp)))
         if humi:
@@ -247,7 +247,7 @@ class AmbientTempHumiSensor(TempSensor):
             log.info('Ambient humidity: {:.1f}%'.format(float(self.humi)))
         elif now > self.last.shift(minutes=self.cache_mins):
             self.humi = None
-            log.warning('Unable to get ambient humidity')
+            log.debug('Unable to get ambient humidity')
         elif self.humi:
             log.debug('Last ambient humidity: {:.1f}%'.format(float(self.humi)))
         return self.temp
@@ -360,7 +360,7 @@ class SwitchSensor(Sensor):
     def _wait(self, detect=GPIO.RISING):
         if (self.is_closed() and detect == GPIO.RISING) or \
            (self.is_open() and detect == GPIO.FALLING):
-            return False
+            return True
         log.debug('Waiting...')
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.port, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
@@ -683,7 +683,7 @@ class SunriseSunsetSensor(Sensor):
     def read_sensor(self):
         now = arrow.utcnow()
 
-        if self.last is None or (now - self.last).days > 1:
+        if self.last is None or now.to('US/Eastern').day > self.sunset.to('US/Eastern').day:
             try:
                 url = 'https://api.sunrise-sunset.org/json?lat={lat}&lng={lon}&date=today&formatted=0'.format(
                     lat=self.lat,
@@ -712,14 +712,16 @@ class SunriseSunsetSensor(Sensor):
         return now
 
     def go_day(self):
-        if self.sunset is not None and self.sunrise is not None:
+        if self.last:
             now = arrow.utcnow()
             if now.to('US/Eastern').day < self.sunrise.to('US/Eastern').day:
                 # past sunset, already have sunrise/sunset info for next day
                 return False
             else:
-                after_sunrise = now > self.sunrise.shift(minutes=self.extra_min_sunrise)
-                before_sunset = now < self.sunset.shift(minutes=self.extra_min_sunset)
+                after_sunrise = now.to('US/Eastern') > \
+                                self.sunrise.to('US/Eastern').shift(minutes=self.extra_min_sunrise)
+                before_sunset = now.to('US/Eastern') < \
+                                self.sunset.to('US/Eastern').shift(minutes=self.extra_min_sunset)
                 return after_sunrise and before_sunset
         else:
             return None

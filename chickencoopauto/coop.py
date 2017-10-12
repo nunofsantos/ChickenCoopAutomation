@@ -101,6 +101,9 @@ class Coop(Thread, utils.Singleton):
             'EMAIL_FROM': parser.get('Notifications', 'EMAIL_FROM'),
             'EMAIL_PASSWORD': parser.get('Notifications', 'EMAIL_PASSWORD'),
             'EMAILS_TO': parser.get('Notifications', 'EMAILS_TO'),
+            'SMS': parser.getboolean('Notifications', 'SMS'),
+            'SMS_THRESHOLD': parser.get('Notifications', 'SMS_THRESHOLD'),
+            'SMS_TO': parser.get('Notifications', 'SMS_TO'),
         }
 
         config = {
@@ -289,6 +292,18 @@ class Coop(Thread, utils.Singleton):
                         'password': self.config['Notifications']['EMAIL_PASSWORD'],
                     },
                     'emails_to': self.config['Notifications']['EMAILS_TO'],
+                    'message': notification.message
+                }
+                self.email_callback(**kwargs)
+        if self.config['Notifications']['SMS']:
+            if Notification.severity_levels[severity] >= \
+                    Notification.severity_levels[self.config['Notifications']['SMS_THRESHOLD']]:
+                kwargs = {
+                    'gmail_credentials': {
+                        'email': self.config['Notifications']['EMAIL_FROM'],
+                        'password': self.config['Notifications']['EMAIL_PASSWORD'],
+                    },
+                    'emails_to': self.config['Notifications']['SMS_TO'],
                     'message': notification.message
                 }
                 self.email_callback(**kwargs)

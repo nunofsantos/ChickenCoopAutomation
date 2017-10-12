@@ -1,16 +1,26 @@
 import logging
+from logging.handlers import RotatingFileHandler
 import thread
 
 import web
 
 from chickencoopauto.coop import Coop
-# from chickencoopauto.utils import DummyThread
 
 
-logging.basicConfig()
-log = logging.getLogger('main')
-log.setLevel(logging.DEBUG)
-logging.getLogger('chickencoopauto').setLevel(logging.DEBUG)
+log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+log_filehandler = RotatingFileHandler('/var/log/chickencoop/coop.log', maxBytes=1024**2, backupCount=100)
+log_filehandler.setFormatter(log_formatter)
+log_filehandler.setLevel(logging.WARN)
+
+log_consolehandler = logging.StreamHandler()
+log_consolehandler.setFormatter(log_formatter)
+log_consolehandler.setLevel(logging.DEBUG)
+
+logger = logging.getLogger('chickencoopauto')
+logger.addHandler(log_filehandler)
+logger.addHandler(log_consolehandler)
+logger.setLevel(logging.DEBUG)
 
 urls = (
     '/', 'chickencoopauto.controllers.CoopGetStatus',
@@ -31,12 +41,8 @@ if __name__ == '__main__':
 
     app = web.application(urls, globals())
 
-    # dummy = DummyThread()
-    # dummy.daemon = True
-
     try:
         coop.start()
-        # dummy.start()
         thread.start_new_thread(app.run(), ())
         while coop.isAlive():
             coop.join(5)

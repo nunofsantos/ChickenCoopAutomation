@@ -1,7 +1,8 @@
 import logging
+from time import sleep
 
 import RPi.GPIO as GPIO
-from transitions.extensions import GraphMachine as Machine
+from transitions import Machine
 
 from notifications import Notification
 
@@ -512,6 +513,8 @@ class Door(MultiRelayOperatedObject):
         else:
             switches.bottom_sensor.failed_to_wait()
             opened = False
+        # delay to compensate for switches sometimes trigerring too soon
+        sleep(0.1)
         super(Door, self).turn_off(1)
         if not opened:
             switches.top_sensor.failed_to_wait()
@@ -543,6 +546,8 @@ class Door(MultiRelayOperatedObject):
         else:
             switches.top_sensor.failed_to_wait()
             closed = False
+        # delay to compensate for switches sometimes trigerring too soon
+        sleep(0.1)
         super(Door, self).turn_off(0)
         if not closed:
             switches.bottom_sensor.failed_to_wait()

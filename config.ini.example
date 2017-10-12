@@ -45,10 +45,13 @@ EXTRA_MIN_SUNSET = 0
 LOG = True
 LOG_THRESHOLD = INFO
 EMAIL = True
-EMAIL_THRESHOLD = ERROR
+EMAIL_THRESHOLD = WARN
 EMAILS_TO = a@example.com,b@example.com
 EMAIL_FROM = from@example.com
 EMAIL_PASSWORD = from-password
+SMS = True
+SMS_THRESHOLD = ERROR
+SMS_TO = number@verizontext.com
 
 [Authentication]
 USERNAME = username
