@@ -1,0 +1,15 @@
+[Unit]
+Description=Chicken Coop Automation
+After=multi-user.target
+
+[Service]
+Type=idle
+User=pi
+Group=pi
+StandardOutput=null
+StandardError=null
+WorkingDirectory=/home/pi/Projects/ChickenCoopAutomation
+ExecStart=/usr/bin/python /home/pi/Projects/ChickenCoopAutomation/main.py
+
+[Install]
+WantedBy=multi-user.target

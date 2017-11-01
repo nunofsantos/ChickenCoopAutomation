@@ -33,6 +33,7 @@ urls = (
     '/Door/(open|close)', 'chickencoopauto.controllers.DoorOpenClose',
     '/Fan/(manual|auto)', 'chickencoopauto.controllers.FanSetMode',
     '/Fan/(on|off)', 'chickencoopauto.controllers.FanSetOnOff',
+    '/reboot', 'chickencoopauto.controllers.Reboot',
 )
 
 if __name__ == '__main__':

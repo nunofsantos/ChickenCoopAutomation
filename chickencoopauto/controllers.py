@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from base64 import decodestring
 from re import sub
+from subprocess import call
 
 from arrow import now
 from transitions.core import EventData
@@ -13,11 +14,17 @@ from notifications import Notification
 render = web.template.render('templates')
 
 
+def get_username_password(auth):
+    if not auth:
+        return ('', '')
+    auth = sub('^Basic ', '', auth)
+    username, password = decodestring(auth).split(':')
+    return (username, password)
+
 def validate_user(auth, notify=False):
     if not auth:
         return False
-    auth = sub('^Basic ', '', auth)
-    username, password = decodestring(auth).split(':')
+    username, password = get_username_password(auth)
     coop = Coop()
     if username == coop.config['Authentication']['USERNAME'] \
        and password == coop.config['Authentication']['PASSWORD']:
@@ -168,4 +175,18 @@ class DoorOpenClose(AuthenticatedUser):
         if day_night == 'invalid':
             day_night = 'night'
         coop.door.set_state('manual-{}-{}'.format(state, day_night))
+        raise web.seeother('/')
+
+
+class Reboot(AuthenticatedUser):
+    def GET(self):
+        super(Reboot, self).GET()
+        username, _ = get_username_password(web.ctx.env.get('HTTP_AUTHORIZATION'))
+        coop = Coop()
+        coop.notifier_callback(
+            Notification('WARN',
+                         'Reboot initiated by user {username}',
+                         username=username)
+        )
+        call(['/usr/bin/sudo', '/sbin/shutdown', '-r', '+1'])
         raise web.seeother('/')
