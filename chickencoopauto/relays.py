@@ -233,6 +233,30 @@ class WaterHeater(SingleRelayOperatedObject):
         self.temp_range = temp_range
 
 
+class Heater(SingleRelayOperatedObject):
+    def __init__(self, coop, name, relay, temp_range):
+        self.temp_range = temp_range
+        self.temp = None
+        super(Heater, self).__init__(
+            coop,
+            name,
+            relay
+        )
+
+    def is_auto_go_on(self, event=None):
+        temp = event.kwargs.get('temp', None)
+        return (temp is not None and
+                temp < self.temp_range[0])
+
+    def is_auto_go_off(self, event=None):
+        temp = event.kwargs.get('temp', None)
+        return (temp is None or
+                temp > self.temp_range[1])
+
+    def set_temp_range(self, temp_range):
+        self.temp_range = temp_range
+
+
 class Fan(SingleRelayOperatedObject):
     def __init__(self, coop, name, relay, temp_range):
         self.temp_range = temp_range

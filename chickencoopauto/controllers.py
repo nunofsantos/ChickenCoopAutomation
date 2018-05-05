@@ -62,6 +62,7 @@ class CoopGetStatus(AuthenticatedUser):
         coop.check()
         return render.index(
             coop.status,
+            coop.rebooting,
             now().format('MMMM DD, hh:mm a'),
             coop.sunset_sunrise_sensor.state,
             coop.sunset_sunrise_sensor.status(),
@@ -183,6 +184,7 @@ class Reboot(AuthenticatedUser):
         super(Reboot, self).GET()
         username, _ = get_username_password(web.ctx.env.get('HTTP_AUTHORIZATION'))
         coop = Coop()
+        coop.rebooting = True
         coop.notifier_callback(
             Notification('WARN',
                          'Reboot initiated by user {username}',

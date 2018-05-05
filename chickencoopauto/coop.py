@@ -65,6 +65,8 @@ class Coop(Thread, utils.Singleton):
             'SENSOR_PORT': parser.getint('AmbientTempHumi', 'SENSOR_PORT'),
             'TEMP_FAN': parser.getfloat('AmbientTempHumi', 'TEMP_FAN'),
             'FAN_PORT': parser.getint('AmbientTempHumi', 'FAN_PORT'),
+            'TEMP_HEATER': parser.getfloat('AmbientTempHumi', 'TEMP_HEATER'),
+            'HEATER_PORT': parser.getint('AmbientTempHumi', 'HEATER_PORT'),
         }
 
         light_options = {
@@ -153,6 +155,7 @@ class Coop(Thread, utils.Singleton):
             3: relays.Relay(self, 3, 'Door Relay 1', self.config['Door']['PORT_1'], 'off'),
             4: relays.Relay(self, 4, 'Door Relay 2', self.config['Door']['PORT_2'], 'off'),
             5: relays.Relay(self, 5, 'Fan Relay', self.config['AmbientTempHumi']['FAN_PORT'], 'off'),
+            6: relays.Relay(self, 5, 'Heater Relay', self.config['AmbientTempHumi']['HEATER_PORT'], 'off'),
         }
 
         self.water_heater_relay = self.relay_module[1]
@@ -209,6 +212,15 @@ class Coop(Thread, utils.Singleton):
             (self.config['AmbientTempHumi']['TEMP_FAN'] - 5.0, self.config['AmbientTempHumi']['TEMP_FAN'])
         )
 
+        self.heater_relay = self.relay_module[6]
+        self.heater = relays.Heater(
+            self,
+            'Heater',
+            self.heater_relay,
+            (self.config['AmbientTempHumi']['TEMP_HEATER'], self.config['AmbientTempHumi']['TEMP_HEATER'] + 5.0)
+        )
+
+        self.rebooting = False
         self.initialized = True
 
     def check(self):
@@ -223,6 +235,7 @@ class Coop(Thread, utils.Singleton):
                         sunrise_sunset=self.sunset_sunrise_sensor)
         self.light.check(sunrise_sunset=self.sunset_sunrise_sensor)
         self.fan.check(temp=self.ambient_temp_humi_sensor.temp)
+        self.heater.check(temp=self.ambient_temp_humi_sensor.temp)
         self.status_led.on(self._convert_status_to_color(self.status))
 
     def run(self):
