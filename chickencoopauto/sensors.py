@@ -7,7 +7,7 @@ import Adafruit_DHT as DHT  # noqa: N814
 import requests
 from requests.exceptions import RequestException
 import RPi.GPIO as GPIO
-from w1thermsensor import W1ThermSensor
+from w1thermsensor import NoSensorFoundError, W1ThermSensor
 
 from transitions import Machine
 
@@ -255,19 +255,26 @@ class AmbientTempHumiSensor(TempSensor):
 
 class WaterTempSensor(TempSensor):
     def __init__(self, coop, name, temp_range):
+        try:
+            w1_sensor = W1ThermSensor()
+        except NoSensorFoundError:
+            log.error('Water temperature sensor not found!')
+            w1_sensor = None
+
         super(WaterTempSensor, self).__init__(
             coop,
             name,
-            W1ThermSensor(),
+            w1_sensor,
             4,  # must go in GPIO4 !!!
             temp_range
         )
 
     def read_sensor(self):
-        self.temp = self.sensor.get_temperature(W1ThermSensor.DEGREES_F)
-        self.last = arrow.utcnow()
-        log.info('Water temp: {:.1f}'.format(float(self.temp)))
-        return self.temp
+        if self.sensor:
+            self.temp = self.sensor.get_temperature(W1ThermSensor.DEGREES_F)
+            self.last = arrow.utcnow()
+            log.info('Water temp: {:.1f}'.format(float(self.temp)))
+            return self.temp
 
     def notify_temp_high(self):
         pass
@@ -283,6 +290,8 @@ class WaterTempSensor(TempSensor):
         if self.state in ['temp_low', 'temp_error_high', 'temp_invalid']:
             warn = True
         if self.state in ['temp_error_low']:
+            error = True
+        if not self.sensor:
             error = True
 
         if error:
