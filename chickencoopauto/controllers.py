@@ -66,8 +66,8 @@ class CoopGetStatus(AuthenticatedUser):
             now().format('MMMM DD, hh:mm a'),
             coop.sunset_sunrise_sensor.state,
             coop.sunset_sunrise_sensor.status(),
-            coop.sunset_sunrise_sensor.get_sunrise().format('MMMM DD, hh:mm a'),
-            coop.sunset_sunrise_sensor.get_sunset().format('MMMM DD, hh:mm a'),
+            coop.sunset_sunrise_sensor.sunrise_display(),
+            coop.sunset_sunrise_sensor.sunset_display(),
             coop.ambient_temp_humi_sensor.state,
             coop.ambient_temp_humi_sensor.status(),
             u'{:.1f} \N{DEGREE SIGN}F'.format(coop.ambient_temp_humi_sensor.temp)
@@ -76,7 +76,7 @@ class CoopGetStatus(AuthenticatedUser):
             '{:.1f} %'.format(coop.ambient_temp_humi_sensor.humi)
                 if isinstance(coop.ambient_temp_humi_sensor.humi, float)
                 else '???',
-            u'{:.1f} \N{DEGREE SIGN}F'.format(coop.water_temp_sensor.temp),
+            u'{:.1f} \N{DEGREE SIGN}F'.format(coop.water_temp_sensor.temp) if coop.water_temp_sensor.temp else '???',
             coop.water_heater.state,
             coop.max_status_level([coop.water_heater.status(), coop.water_temp_sensor.status()]),
             coop.water_heater_relay.state,

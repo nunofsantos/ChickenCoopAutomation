@@ -771,14 +771,28 @@ class SunriseSunsetSensor(Sensor):
     def get_sunrise(self):
         if self.sunrise is not None:
             return self.sunrise.shift(minutes=self.extra_min_sunrise).to('US/Eastern')
-        else:
-            return None
+
+    def _time_display(self, suntime, extra, include_extra=False, display_extra=True):
+        if suntime is not None:
+            result = suntime.shift(
+                minutes=extra if include_extra else 0
+            ).to('US/Eastern').format('MMMM DD, hh:mm a')
+            if display_extra and extra != 0:
+                result += ' ({}{:+}min)'.format(
+                    'inc ' if include_extra else '',
+                    extra
+                )
+            return result
+
+    def sunrise_display(self, include_extra=False, display_extra=True):
+        return self._time_display(self.sunrise, self.extra_min_sunrise, include_extra, display_extra)
 
     def get_sunset(self):
         if self.sunset is not None:
             return self.sunset.shift(minutes=self.extra_min_sunset).to('US/Eastern')
-        else:
-            return None
+
+    def sunset_display(self, include_extra=False, display_extra=True):
+        return self._time_display(self.sunset, self.extra_min_sunset, include_extra, display_extra)
 
     def set_extra_min_sunrise(self, extra_min):
         self.extra_min_sunrise = extra_min
