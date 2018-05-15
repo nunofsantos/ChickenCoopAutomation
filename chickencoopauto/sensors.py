@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 class Sensor(Machine):
     def __init__(self, *args, **kwargs):
         self.last = None
-        self.name = kwargs.pop('name')
+        self.name = kwargs.get('name', None)
         super(Sensor, self).__init__(*args, **kwargs)
 
     def read_sensor(self):
@@ -772,7 +772,8 @@ class SunriseSunsetSensor(Sensor):
         if self.sunrise is not None:
             return self.sunrise.shift(minutes=self.extra_min_sunrise).to('US/Eastern')
 
-    def _time_display(self, suntime, extra, include_extra=False, display_extra=True):
+    @staticmethod
+    def _time_display(suntime, extra, include_extra=False, display_extra=True):
         if suntime is not None:
             result = suntime.shift(
                 minutes=extra if include_extra else 0

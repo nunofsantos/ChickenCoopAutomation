@@ -88,7 +88,10 @@ class CoopGetStatus(AuthenticatedUser):
             coop.light.state,
             coop.light.status(),
             coop.fan.state,
-            coop.fan.status()
+            coop.fan.status(),
+            coop.heater.state,
+            coop.max_status_level([coop.heater.status(), coop.ambient_temp_humi_sensor.status()]),
+            coop.heater_relay.state,
         )
 
 
@@ -136,6 +139,20 @@ class FanSetOnOff(AuthenticatedUser):
         super(FanSetOnOff, self).GET()
         coop = Coop()
         _single_relay_operated_object_set_on_off(coop.fan, state)
+
+
+class HeaterSetMode(AuthenticatedUser):
+    def GET(self, mode):
+        super(HeaterSetMode, self).GET()
+        coop = Coop()
+        _single_relay_operated_object_set_mode(coop.heater, mode)
+
+
+class HeaterSetOnOff(AuthenticatedUser):
+    def GET(self, state):
+        super(HeaterSetOnOff, self).GET()
+        coop = Coop()
+        _single_relay_operated_object_set_on_off(coop.heater, state)
 
 
 class LightSetMode(AuthenticatedUser):

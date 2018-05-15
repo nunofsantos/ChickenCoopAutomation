@@ -95,6 +95,11 @@ class Coop(Thread, utils.Singleton):
             'EXTRA_MIN_SUNSET': parser.getint('Door', 'EXTRA_MIN_SUNSET'),
         }
 
+        other_options = {
+            'UNUSED_PORT_1': parser.getint('Other', 'UNUSED_PORT_1'),
+            'UNUSED_PORT_2': parser.getint('Other', 'UNUSED_PORT_2'),
+        }
+
         notifications_options = {
             'LOG': parser.getboolean('Notifications', 'LOG'),
             'LOG_THRESHOLD': parser.get('Notifications', 'LOG_THRESHOLD'),
@@ -116,6 +121,7 @@ class Coop(Thread, utils.Singleton):
             'Light': light_options,
             'Water': water_options,
             'Door': door_options,
+            'Other': other_options,
             'Notifications': notifications_options,
         }
 
@@ -155,7 +161,9 @@ class Coop(Thread, utils.Singleton):
             3: relays.Relay(self, 3, 'Door Relay 1', self.config['Door']['PORT_1'], 'off'),
             4: relays.Relay(self, 4, 'Door Relay 2', self.config['Door']['PORT_2'], 'off'),
             5: relays.Relay(self, 5, 'Fan Relay', self.config['AmbientTempHumi']['FAN_PORT'], 'off'),
-            6: relays.Relay(self, 5, 'Heater Relay', self.config['AmbientTempHumi']['HEATER_PORT'], 'off'),
+            6: relays.Relay(self, 6, 'Heater Relay', self.config['AmbientTempHumi']['HEATER_PORT'], 'off'),
+            7: relays.Relay(self, 7, 'Unused Relay 1', self.config['Other']['UNUSED_PORT_1'], 'off'),
+            8: relays.Relay(self, 8, 'Unused Relay 2', self.config['Other']['UNUSED_PORT_2'], 'off'),
         }
 
         self.water_heater_relay = self.relay_module[1]
@@ -253,7 +261,7 @@ class Coop(Thread, utils.Singleton):
         for relay in self.relay_module.values():
             relay.reset()
         self.status_led.reset()
-        GPIO.cleanup()
+        # GPIO.cleanup()
 
     @staticmethod
     def max_status_level(status_list):

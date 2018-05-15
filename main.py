@@ -33,6 +33,8 @@ urls = (
     '/Door/(open|close)', 'chickencoopauto.controllers.DoorOpenClose',
     '/Fan/(manual|auto)', 'chickencoopauto.controllers.FanSetMode',
     '/Fan/(on|off)', 'chickencoopauto.controllers.FanSetOnOff',
+    '/Heater/(manual|auto)', 'chickencoopauto.controllers.HeaterSetMode',
+    '/Heater/(on|off)', 'chickencoopauto.controllers.HeaterSetOnOff',
     '/reboot', 'chickencoopauto.controllers.Reboot',
 )
 

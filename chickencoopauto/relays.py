@@ -182,20 +182,30 @@ class SingleRelayOperatedObject(Machine):
 
     def turn_on(self, event=None):
         self.relay.turn_on()
+        extra_info = ''
+        if event and 'temp' in event.kwargs:
+            temp = event.kwargs.get('temp')
+            extra_info = ' (temp={:.1f})'.format(temp) if temp else '???'
         self.coop.notifier_callback(
             Notification('INFO',
-                         '{name} turned on{auto}',
+                         '{name} turned on{auto}{extra_info}',
                          name=self.name,
-                         auto=('' if self.is_manual_mode() else ' automatically'))
+                         auto=('' if self.is_manual_mode() else ' automatically'),
+                         extra_info=extra_info)
         )
 
     def turn_off(self, event=None):
         self.relay.turn_off()
+        extra_info = ''
+        if event and 'temp' in event.kwargs:
+            temp = event.kwargs.get('temp')
+            extra_info = ' (temp={:.1f})'.format(temp) if temp else '???'
         self.coop.notifier_callback(
             Notification('INFO',
-                         '{name} turned off{auto}',
+                         '{name} turned off{auto}{extra_info}',
                          name=self.name,
-                         auto=('' if self.is_manual_mode() else ' automatically'))
+                         auto=('' if self.is_manual_mode() else ' automatically'),
+                         extra_info=extra_info)
         )
 
     def status(self):
@@ -538,7 +548,7 @@ class Door(MultiRelayOperatedObject):
             switches.bottom_sensor.failed_to_wait()
             opened = False
         # delay to compensate for switches sometimes trigerring too soon
-        sleep(0.1)
+        # sleep(0.1)
         super(Door, self).turn_off(1)
         if not opened:
             switches.top_sensor.failed_to_wait()
