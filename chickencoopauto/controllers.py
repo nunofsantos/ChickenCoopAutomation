@@ -55,6 +55,16 @@ class Login(object):
             web.ctx.status = '401 Unauthorized'
 
 
+class HeartbeatStatus(object):
+    def GET(self):
+        coop = Coop()
+        coop.check()
+        return render.heartbeat(
+            coop.status,
+            coop.rebooting
+        )
+
+
 class CoopGetStatus(AuthenticatedUser):
     def GET(self):
         super(CoopGetStatus, self).GET()

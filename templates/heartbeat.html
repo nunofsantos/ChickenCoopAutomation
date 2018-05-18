@@ -1,0 +1,5 @@
+$def with (status, rebooting)
+$code:
+    def get_full_status(status, rebooting):
+        return status if not rebooting else 'Rebooting'
+${get_full_status(status, rebooting)}

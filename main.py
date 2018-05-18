@@ -36,6 +36,7 @@ urls = (
     '/Heater/(manual|auto)', 'chickencoopauto.controllers.HeaterSetMode',
     '/Heater/(on|off)', 'chickencoopauto.controllers.HeaterSetOnOff',
     '/reboot', 'chickencoopauto.controllers.Reboot',
+    '/status', 'chickencoopauto.controllers.HeartbeatStatus',
 )
 
 if __name__ == '__main__':
