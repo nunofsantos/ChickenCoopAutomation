@@ -1,0 +1,645 @@
+body {
+  background-color: rgb(255, 255, 255);
+  font: 400 1em/1.38 Helvetica;
+  color: rgb(0, 0, 0);
+}
+
+.container {
+  position: relative;
+  float: left;
+  width: 470px;
+  height: 158px;
+  border-width: 3px;
+  border-style: solid;
+  border-radius: 15px;
+}
+
+.element {
+  position: relative;
+  float: left;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center center;
+  background-color: rgb(255, 255, 255);
+}
+
+.text {
+  position: relative;
+  float: left;
+  color: rgb(0, 0, 0);
+}
+
+.text-red {
+  color: rgb(255, 0, 0);
+}
+
+.text-green {
+  color: rgb(0, 255, 0);
+}
+
+.text-blue {
+  color: rgb(0, 0, 255);
+}
+
+._button {
+  display: block;
+  position: relative;
+  float: left;
+  border-radius: 3px;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center center;
+  background-color: rgb(255, 255, 255);
+  font-size: 1em;
+  text-align: center;
+  color: rgb(0, 0, 0);
+}
+
+.container-red {
+  border-color: rgb(255, 0, 0);
+}
+
+.container-green {
+  border-color: rgb(0, 255, 0);
+}
+
+.container-blue {
+  border-color: rgb(0, 0, 255);
+}
+
+.container-yellow {
+  border-color: rgb(255, 255, 0);
+}
+
+.container-time {
+  clear: both;
+  z-index: 7;
+  margin: 20px 0 0 14px;
+}
+
+.container-door {
+  z-index: 3;
+  margin: -158px 0 0 504px;
+}
+
+.container-ambient {
+  z-index: 15;
+  margin: 20px 0 0 14px;
+}
+
+.container-water-temp {
+  z-index: 49;
+  margin: -158px 0 0 504px;
+}
+
+.container-fan {
+  z-index: 25;
+  margin: 20px 0 0 14px;
+}
+
+.container-waterheater {
+  z-index: 33;
+  margin: -158px 0 0 504px;
+}
+
+.container-heater {
+  z-index: 29;
+  margin: 20px 0 0 14px;
+}
+
+.container-waterlevel {
+  z-index: 37;
+  margin: -158px 0 0 504px;
+}
+
+.container-light {
+  z-index: 21;
+  margin: 20px 0 0 14px;
+}
+
+.element-1 {
+  z-index: 1;
+  width: 100px;
+  height: 100px;
+  margin: 6px 0 0 215px;
+  background-image: url('/static/images/chicken.png');
+}
+
+.element-light-icon {
+  clear: both;
+  z-index: 22;
+  width: 110px;
+  height: 120px;
+  margin: -139px 0 0 28px;
+}
+
+.light-icon-on {
+  background-image: url('/static/images/light-on.png');
+}
+
+.light-icon-off {
+  background-image: url('/static/images/light-off.png');
+}
+
+.element-time-icon {
+  clear: both;
+  z-index: 8;
+  width: 110px;
+  height: 120px;
+  margin: -139px 0 0 28px;
+}
+
+.time-icon-day {
+  background-image: url('/static/images/day.png');
+}
+
+.time-icon-night {
+  background-image: url('/static/images/night.png');
+}
+
+.element-door-icon {
+  z-index: 4;
+  width: 110px;
+  height: 120px;
+  margin: -139px 0 0 515px;
+}
+
+.door-icon-open-ok {
+  background-image: url('/static/images/door-open-ok.png');
+}
+
+.door-icon-open-error {
+  background-image: url('/static/images/door-open-error.png');
+}
+
+.door-icon-closed-ok {
+  background-image: url('/static/images/door-closed-ok.png');
+}
+
+.door-icon-closed-error {
+  background-image: url('/static/images/door-closed-error.png');
+}
+
+.door-icon-invalid-error {
+  background-image: url('/static/images/door-invalid-error.png');
+}
+
+.element-ambient-temp-icon {
+  clear: both;
+  z-index: 16;
+  width: 110px;
+  height: 120px;
+  margin: -139px 0 0 28px;
+}
+
+.ambient-temp-icon-ok {
+  background-image: url('/static/images/thermometer-ok.png');
+}
+
+.ambient-temp-icon-high {
+  background-image: url('/static/images/thermometer-high.png');
+}
+
+.ambient-temp-icon-low {
+  background-image: url('/static/images/thermometer-low.png');
+}
+
+.ambient-temp-icon-invalid {
+  background-image: url('/static/images/thermometer-invalid.png');
+}
+
+.element-water-temp {
+  z-index: 50;
+  width: 110px;
+  height: 120px;
+  margin: -139px 0 0 520px;
+}
+
+.water-temp-icon-ok {
+  background-image: url('/static/images/water-thermometer-ok.png');
+}
+
+.water-temp-icon-high {
+  background-image: url('/static/images/water-thermometer-high.png');
+}
+.water-temp-icon-low {
+  background-image: url('/static/images/water-thermometer-low.png');
+}
+.water-temp-icon-invalid {
+  background-image: url('/static/images/water-thermometer-invalid.png');
+}
+
+.element-fan {
+  clear: both;
+  z-index: 26;
+  width: 110px;
+  height: 120px;
+  margin: -138px 0 0 28px;
+}
+
+.fan-icon-on {
+  background-image: url('/static/images/fan-on.png');
+}
+
+.fan-icon-off {
+  background-image: url('/static/images/fan-off.png');
+}
+
+.element-water-heater {
+  z-index: 34;
+  width: 110px;
+  height: 120px;
+  margin: -139px 0 0 520px;
+}
+
+.water-heater-icon-on {
+  background-image: url('/static/images/water-heater-on.png');
+}
+
+.water-heater-icon-off {
+  background-image: url('/static/images/water-heater-off.png');
+}
+
+.element-heater {
+  clear: both;
+  z-index: 30;
+  width: 110px;
+  height: 120px;
+  margin: -139px 0 0 28px;
+}
+
+.heater-icon-on {
+  background-image: url('/static/images/heater-on.png');
+}
+
+.heater-icon-off {
+  background-image: url('/static/images/heater-off.png');
+}
+
+.element-waterlevel {
+  z-index: 38;
+  width: 110px;
+  height: 120px;
+  margin: -139px 0 0 519px;
+}
+
+.waterlevel-icon-full {
+    background-image: url('/static/images/water-level-full.png');
+}
+
+.waterlevel-icon-half {
+    background-image: url('/static/images/water-level-half.png');
+}
+
+.waterlevel-icon-empty {
+    background-image: url('/static/images/water-level-empty.png');
+}
+
+.waterlevel-icon-invalid {
+    background-image: url('/static/images/water-level-invalid.png');
+}
+
+.text-1 {
+  z-index: 0;
+  margin: 36px 0 0 25px;
+  font-size: 1.875em;
+  font-weight: bold;
+}
+
+.text-10 {
+  z-index: 59;
+  min-height: 19px;
+  margin: -41px 0 0 647px;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.text-11 {
+  z-index: 58;
+  min-height: 19px;
+  margin: -139px 0 0 748px;
+  font-size: 1em;
+}
+
+.text-12 {
+  z-index: 60;
+  min-height: 19px;
+  margin: -41px 0 0 748px;
+  font-size: 1em;
+}
+
+.text-13 {
+  z-index: 17;
+  min-height: 19px;
+  margin: -139px 0 0 158px;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.text-14 {
+  z-index: 18;
+  min-height: 19px;
+  margin: -139px 0 0 258px;
+  font-size: 1em;
+}
+
+.text-15 {
+  z-index: 19;
+  min-height: 19px;
+  margin: -90px 0 0 158px;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.text-16 {
+  z-index: 20;
+  min-height: 19px;
+  margin: -90px 0 0 258px;
+  font-size: 1em;
+}
+
+.text-17 {
+  z-index: 51;
+  min-height: 19px;
+  margin: -90px 0 0 647px;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.text-18 {
+  z-index: 52;
+  min-height: 19px;
+  margin: -90px 0 0 753px;
+  font-size: 1em;
+}
+
+.text-19 {
+  z-index: 41;
+  min-height: 19px;
+  margin: -138px 0 0 158px;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.text-2 {
+  z-index: 2;
+  margin: 36px 0 0 18px;
+  font-size: 1.875em;
+  font-weight: bolder;
+}
+
+.text-20 {
+  z-index: 42;
+  min-height: 19px;
+  margin: -138px 0 0 258px;
+  font-size: 1em;
+}
+
+.text-21 {
+  z-index: 43;
+  min-height: 19px;
+  margin: -40px 0 0 158px;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.text-22 {
+  z-index: 44;
+  min-height: 19px;
+  margin: -40px 0 0 258px;
+  font-size: 1em;
+}
+
+.text-23 {
+  z-index: 53;
+  min-height: 19px;
+  margin: -138px 0 0 647px;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.text-24 {
+  z-index: 55;
+  min-height: 19px;
+  margin: -41px 0 0 647px;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.text-25 {
+  z-index: 54;
+  min-height: 19px;
+  margin: -139px 0 0 753px;
+  font-size: 1em;
+}
+
+.text-26 {
+  z-index: 56;
+  min-height: 19px;
+  margin: -41px 0 0 753px;
+  font-size: 1em;
+}
+
+.text-27 {
+  z-index: 45;
+  min-height: 19px;
+  margin: -139px 0 0 158px;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.text-28 {
+  z-index: 46;
+  min-height: 19px;
+  margin: -139px 0 0 258px;
+  font-size: 1em;
+}
+
+.text-29 {
+  z-index: 47;
+  min-height: 19px;
+  margin: -41px 0 0 158px;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.text-3 {
+  z-index: 9;
+  min-height: 19px;
+  margin: -139px 0 0 158px;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.text-30 {
+  z-index: 48;
+  min-height: 19px;
+  margin: -41px 0 0 258px;
+  font-size: 1em;
+}
+
+.text-31 {
+  z-index: 39;
+  min-height: 19px;
+  margin: -90px 0 0 647px;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.text-32 {
+  z-index: 40;
+  min-height: 19px;
+  margin: -90px 0 0 752px;
+  font-size: 1em;
+}
+
+.text-4 {
+  z-index: 10;
+  min-height: 19px;
+  margin: -139px 0 0 258px;
+  font-size: 1em;
+}
+
+.text-5 {
+  z-index: 13;
+  min-height: 19px;
+  margin: -90px 0 0 158px;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.text-6 {
+  z-index: 14;
+  min-height: 19px;
+  margin: -90px 0 0 258px;
+  font-size: 1em;
+}
+
+.text-7 {
+  z-index: 11;
+  min-height: 19px;
+  margin: -41px 0 0 158px;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.text-8 {
+  z-index: 12;
+  min-height: 19px;
+  margin: -41px 0 0 258px;
+  font-size: 1em;
+}
+
+.text-9 {
+  z-index: 57;
+  min-height: 19px;
+  margin: -139px 0 0 647px;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+._button-auto {
+  background-image: url('/static/images/auto.png');
+}
+
+._button-auto:hover {
+  background-image: url('/static/images/manual.png');
+}
+
+._button-manual {
+  background-image: url('/static/images/manual.png');
+}
+
+._button-manual:hover {
+  background-image: url('/static/images/auto.png');
+}
+
+._button-on {
+  background-image: url('/static/images/on.png');
+}
+
+._button-on:hover {
+  background-image: url('/static/images/off.png');
+}
+
+._button-off {
+  background-image: url('/static/images/off.png');
+}
+
+._button-off:hover {
+  background-image: url('/static/images/on.png');
+}
+
+._button-invalid {
+  background-image: url('/static/images/invalid.png');
+}
+
+._button-1 {
+  z-index: 5;
+  width: 150px;
+  height: 80px;
+  margin: -119px 0 0 667px;
+}
+
+._button-10 {
+  z-index: 24;
+  width: 100px;
+  height: 60px;
+  margin: -109px 0 0 365px;
+}
+
+._button-2 {
+  z-index: 6;
+  width: 100px;
+  height: 60px;
+  margin: -109px 0 0 860px;
+}
+
+._button-3 {
+  z-index: 27;
+  width: 150px;
+  height: 80px;
+  margin: -118px 0 0 158px;
+}
+
+._button-4 {
+  z-index: 28;
+  width: 100px;
+  height: 60px;
+  margin: -108px 0 0 371px;
+}
+
+._button-5 {
+  z-index: 35;
+  width: 150px;
+  height: 80px;
+  margin: -119px 0 0 672px;
+}
+
+._button-6 {
+  z-index: 36;
+  width: 100px;
+  height: 60px;
+  margin: -109px 0 0 865px;
+}
+
+._button-7 {
+  z-index: 31;
+  width: 150px;
+  height: 80px;
+  margin: -119px 0 0 158px;
+}
+
+._button-8 {
+  z-index: 32;
+  width: 100px;
+  height: 60px;
+  margin: -109px 0 0 365px;
+}
+
+._button-9 {
+  z-index: 23;
+  width: 150px;
+  height: 80px;
+  margin: -119px 0 0 158px;
+}

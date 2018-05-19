@@ -303,6 +303,15 @@ class WaterTempSensor(TempSensor):
         else:
             return 'OK'
 
+    def get_state_for_display(self):
+        if not self.temp:
+            return 'temp_invalid'
+        if self.temp < self.temp_low:
+            return 'temp_low'
+        elif self.temp > self.temp_error_high:
+            return 'temp_high'
+        else:
+            return 'temp_ok'
 
 class SwitchSensor(Sensor):
     def __init__(self, coop, name, port, timeout=10000):
@@ -773,11 +782,12 @@ class SunriseSunsetSensor(Sensor):
             return self.sunrise.shift(minutes=self.extra_min_sunrise).to('US/Eastern')
 
     @staticmethod
-    def _time_display(suntime, extra, include_extra=False, display_extra=True):
+    def _time_display(suntime, extra, include_extra=False, display_extra=True, include_day=False):
         if suntime is not None:
+            time_format = 'MMMM DD, hh:mm a' if include_day else 'hh:mm a'
             result = suntime.shift(
                 minutes=extra if include_extra else 0
-            ).to('US/Eastern').format('MMMM DD, hh:mm a')
+            ).to('US/Eastern').format(time_format)
             if display_extra and extra != 0:
                 result += ' ({}{:+}min)'.format(
                     'inc ' if include_extra else '',
@@ -785,15 +795,15 @@ class SunriseSunsetSensor(Sensor):
                 )
             return result
 
-    def sunrise_display(self, include_extra=False, display_extra=True):
-        return self._time_display(self.sunrise, self.extra_min_sunrise, include_extra, display_extra)
+    def sunrise_display(self, include_extra=False, display_extra=True, include_day=False):
+        return self._time_display(self.sunrise, self.extra_min_sunrise, include_extra, display_extra, include_day)
 
     def get_sunset(self):
         if self.sunset is not None:
             return self.sunset.shift(minutes=self.extra_min_sunset).to('US/Eastern')
 
-    def sunset_display(self, include_extra=False, display_extra=True):
-        return self._time_display(self.sunset, self.extra_min_sunset, include_extra, display_extra)
+    def sunset_display(self, include_extra=False, display_extra=True, include_day=False):
+        return self._time_display(self.sunset, self.extra_min_sunset, include_extra, display_extra, include_day)
 
     def set_extra_min_sunrise(self, extra_min):
         self.extra_min_sunrise = extra_min

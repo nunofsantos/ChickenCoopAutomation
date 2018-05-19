@@ -9,6 +9,7 @@ import web
 
 from coop import Coop
 from notifications import Notification
+from utils import format_humi, format_temp
 
 
 render = web.template.render('templates')
@@ -76,31 +77,37 @@ class CoopGetStatus(AuthenticatedUser):
             now().format('MMMM DD, hh:mm a'),
             coop.sunset_sunrise_sensor.state,
             coop.sunset_sunrise_sensor.status(),
-            coop.sunset_sunrise_sensor.sunrise_display(),
-            coop.sunset_sunrise_sensor.sunset_display(),
+            coop.sunset_sunrise_sensor.sunrise_display(display_extra=False),
+            coop.sunset_sunrise_sensor.sunset_display(display_extra=False),
             coop.ambient_temp_humi_sensor.state,
             coop.ambient_temp_humi_sensor.status(),
-            u'{:.1f} \N{DEGREE SIGN}F'.format(coop.ambient_temp_humi_sensor.temp)
-                if isinstance(coop.ambient_temp_humi_sensor.temp, float)
-                else '???',
-            '{:.1f} %'.format(coop.ambient_temp_humi_sensor.humi)
-                if isinstance(coop.ambient_temp_humi_sensor.humi, float)
-                else '???',
-            u'{:.1f} \N{DEGREE SIGN}F'.format(coop.water_temp_sensor.temp) if coop.water_temp_sensor.temp else '???',
+            format_temp(coop.ambient_temp_humi_sensor.temp),
+            format_humi(coop.ambient_temp_humi_sensor.humi),
+            format_temp(coop.water_temp_sensor.temp),
+            coop.water_temp_sensor.get_state_for_display(),
+            coop.water_temp_sensor.status(),
+            format_temp(coop.water_heater.temp_range[0]),
+            format_temp(coop.water_heater.temp_range[1]),
             coop.water_heater.state,
-            coop.max_status_level([coop.water_heater.status(), coop.water_temp_sensor.status()]),
+            coop.water_heater.status(),
             coop.water_heater_relay.state,
             coop.door_dual_sensor.state,
+            coop.sunset_sunrise_sensor.sunrise_display(include_extra=True, display_extra=False, include_day=False),
+            coop.sunset_sunrise_sensor.sunset_display(include_extra=True, display_extra=False, include_day=False),
             coop.door.state,
             coop.door.status(),
             coop.water_level_dual_sensor.state,
             coop.water_level_dual_sensor.status(),
             coop.light.state,
             coop.light.status(),
+            format_temp(coop.fan.temp_range[0]),
+            format_temp(coop.fan.temp_range[1]),
             coop.fan.state,
             coop.fan.status(),
+            format_temp(coop.heater.temp_range[0]),
+            format_temp(coop.heater.temp_range[1]),
             coop.heater.state,
-            coop.max_status_level([coop.heater.status(), coop.ambient_temp_humi_sensor.status()]),
+            coop.heater.status(),
             coop.heater_relay.state,
         )
 
