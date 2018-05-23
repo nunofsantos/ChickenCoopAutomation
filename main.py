@@ -1,5 +1,7 @@
 import logging
 from logging.handlers import RotatingFileHandler
+import signal
+import sys
 import thread
 
 import web
@@ -11,16 +13,16 @@ log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(me
 
 log_filehandler = RotatingFileHandler('/var/log/chickencoop/coop.log', maxBytes=1024**2, backupCount=100)
 log_filehandler.setFormatter(log_formatter)
-log_filehandler.setLevel(logging.WARN)
+log_filehandler.setLevel(logging.DEBUG)
 
 log_consolehandler = logging.StreamHandler()
 log_consolehandler.setFormatter(log_formatter)
 log_consolehandler.setLevel(logging.DEBUG)
 
-logger = logging.getLogger('chickencoopauto')
-logger.addHandler(log_filehandler)
-logger.addHandler(log_consolehandler)
-logger.setLevel(logging.DEBUG)
+log = logging.getLogger('chickencoopauto')
+log.addHandler(log_filehandler)
+log.addHandler(log_consolehandler)
+log.setLevel(logging.DEBUG)
 
 urls = (
     '/', 'chickencoopauto.controllers.CoopGetStatus',
@@ -39,7 +41,16 @@ urls = (
     '/status', 'chickencoopauto.controllers.HeartbeatStatus',
 )
 
+
+def sigterm_handler(_, __):
+    log.info('SIGTERM, shutting down')
+    coop = Coop()
+    coop.shutdown()
+    sys.exit(0)
+
+
 if __name__ == '__main__':
+    signal.signal(signal.SIGTERM, sigterm_handler)
     coop = Coop()
     coop.initialize_sensors_relays()
 
@@ -49,6 +60,6 @@ if __name__ == '__main__':
         coop.start()
         thread.start_new_thread(app.run(), ())
         while coop.isAlive():
-            coop.join(5)
+            coop.join(60)
     finally:
         coop.shutdown()

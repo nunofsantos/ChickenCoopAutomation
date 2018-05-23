@@ -19,6 +19,7 @@ log = logging.getLogger(__name__)
 
 class Sensor(Machine):
     def __init__(self, *args, **kwargs):
+        self.state = None
         self.last = None
         self.name = kwargs.get('name', None)
         super(Sensor, self).__init__(*args, **kwargs)
@@ -231,6 +232,7 @@ class AmbientTempHumiSensor(TempSensor):
     def read_sensor(self):
         now = arrow.utcnow()
         humi, temp = DHT.read_retry(self.sensor, self.port, retries=3, delay_seconds=5)
+
         if temp:
             self.temp = float(temp) * 1.8 + 32.0
             self.last = now
@@ -241,6 +243,7 @@ class AmbientTempHumiSensor(TempSensor):
             log.debug('Unable to get ambient temperature')
         elif self.temp:
             log.debug('Last ambient temperature: {:.1f}'.format(float(self.temp)))
+
         if humi:
             self.humi = humi
             self.last = now
@@ -250,6 +253,7 @@ class AmbientTempHumiSensor(TempSensor):
             log.debug('Unable to get ambient humidity')
         elif self.humi:
             log.debug('Last ambient humidity: {:.1f}%'.format(float(self.humi)))
+
         return self.temp
 
 
@@ -312,6 +316,7 @@ class WaterTempSensor(TempSensor):
             return 'temp_high'
         else:
             return 'temp_ok'
+
 
 class SwitchSensor(Sensor):
     def __init__(self, coop, name, port, timeout=10000):
@@ -789,10 +794,7 @@ class SunriseSunsetSensor(Sensor):
                 minutes=extra if include_extra else 0
             ).to('US/Eastern').format(time_format)
             if display_extra and extra != 0:
-                result += ' ({}{:+}min)'.format(
-                    'inc ' if include_extra else '',
-                    extra
-                )
+                result += ' [{:+}min]'.format(extra)
             return result
 
     def sunrise_display(self, include_extra=False, display_extra=True, include_day=False):

@@ -570,6 +570,22 @@ body {
   background-image: url('/static/images/on.png');
 }
 
+._button-on-text {
+  background-image: url('/static/images/on-text.png');
+}
+
+._button-on-text:hover {
+  background-image: url('/static/images/off-text.png');
+}
+
+._button-off-text {
+  background-image: url('/static/images/off-text.png');
+}
+
+._button-off-text:hover {
+  background-image: url('/static/images/on-text.png');
+}
+
 ._button-invalid {
   background-image: url('/static/images/invalid.png');
 }

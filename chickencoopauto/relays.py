@@ -54,6 +54,7 @@ class Relay(Machine):
 
     def reset(self):
         self.set_state(self.transition_initial)
+        self.set_relay(None)
 
     def notify_on(self, event):
         pass

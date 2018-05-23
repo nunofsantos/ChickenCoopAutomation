@@ -1,7 +1,6 @@
 import ConfigParser
 import logging
 import smtplib
-from threading import Thread
 from time import sleep
 
 import Adafruit_DHT as DHT  # noqa: N814
@@ -12,17 +11,16 @@ import led
 from notifications import Notification
 import relays
 import sensors
-import utils
+from utils import Singleton, StoppableThread
 
 
 log = logging.getLogger(__name__)
 
 
-class Coop(Thread, utils.Singleton):
+class Coop(StoppableThread, Singleton):
     def __init__(self):
-        self.initialized = False
-        Thread.__init__(self)
-        utils.Singleton.__init__(self)
+        StoppableThread.__init__(self)
+        Singleton.__init__(self)
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
         self.config = self._read_config()
@@ -235,12 +233,10 @@ class Coop(Thread, utils.Singleton):
         self.sunset_sunrise_sensor.read_and_check()
         self.water_temp_sensor.read_and_check()
         self.water_level_dual_sensor.read_and_check()
-        water_empty = self.water_level_dual_sensor.state == 'empty' or \
-                      self.water_level_dual_sensor.state == 'invalid'
+        water_empty = self.water_level_dual_sensor.state in ['empty', 'invalid']
         self.water_heater.check(temp=self.water_temp_sensor.temp, water_empty=water_empty)
         self.door_dual_sensor.read_and_check()
-        self.door.check(switches=self.door_dual_sensor,
-                        sunrise_sunset=self.sunset_sunrise_sensor)
+        self.door.check(switches=self.door_dual_sensor, sunrise_sunset=self.sunset_sunrise_sensor)
         self.light.check(sunrise_sunset=self.sunset_sunrise_sensor)
         self.fan.check(temp=self.ambient_temp_humi_sensor.temp)
         self.heater.check(temp=self.ambient_temp_humi_sensor.temp)
@@ -250,18 +246,22 @@ class Coop(Thread, utils.Singleton):
         if not self.initialized:
             raise Exception('Coop sensors and relays not initialized!')
 
-        while True:
+        log.warn('Coop initialized')
+        while not self.is_stopping():
             # this takes a while, so don't do it inside coop.check()
             self.ambient_temp_humi_sensor.read_and_check()
             self.check()
             sleep(self.config['Main']['CHECK_FREQUENCY'])
 
     def shutdown(self):
-        log.info('Resetting relays...')
+        self.stop()
+        if self.isAlive():
+            self.join()
         for relay in self.relay_module.values():
             relay.reset()
         self.status_led.reset()
         # GPIO.cleanup()
+        log.warn('Shutdown')
 
     @staticmethod
     def max_status_level(status_list):
@@ -277,7 +277,6 @@ class Coop(Thread, utils.Singleton):
     @property
     def status(self):
         components_status = []
-
         for component in [self.sunset_sunrise_sensor,
                           self.ambient_temp_humi_sensor,
                           self.water_temp_sensor,

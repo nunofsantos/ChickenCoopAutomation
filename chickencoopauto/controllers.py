@@ -22,34 +22,35 @@ def get_username_password(auth):
     username, password = decodestring(auth).split(':')
     return (username, password)
 
-def validate_user(auth, notify=False):
-    if not auth:
+
+def validate_user(ctx, notify=False):
+    if not ctx.env.get('HTTP_AUTHORIZATION'):
         return False
-    username, password = get_username_password(auth)
+    username, password = get_username_password(ctx.env.get('HTTP_AUTHORIZATION'))
     coop = Coop()
-    if username == coop.config['Authentication']['USERNAME'] \
-       and password == coop.config['Authentication']['PASSWORD']:
+    if username == coop.config['Authentication']['USERNAME'] and password == coop.config['Authentication']['PASSWORD']:
         return True
     else:
         if notify:
             coop.notifier_callback(
                 Notification('WARN',
-                             'Failed login attempt: username={username}, password={password}',
+                             'Failed login attempt: username={username}, password={password}, ip={ip}',
                              username=username,
-                             password=password)
+                             password=password,
+                             ip=ctx['ip'])
             )
         return False
 
 
 class AuthenticatedUser(object):
     def GET(self, *args, **kwargs):
-        if not validate_user(web.ctx.env.get('HTTP_AUTHORIZATION')):
+        if not validate_user(web.ctx):
             raise web.seeother('/login')
 
 
 class Login(object):
     def GET(self):
-        if validate_user(web.ctx.env.get('HTTP_AUTHORIZATION'), notify=True):
+        if validate_user(web.ctx, notify=True):
             raise web.seeother('/')
         else:
             web.header('WWW-Authenticate', 'Basic realm="Authentication"')
@@ -92,8 +93,8 @@ class CoopGetStatus(AuthenticatedUser):
             coop.water_heater.status(),
             coop.water_heater_relay.state,
             coop.door_dual_sensor.state,
-            coop.sunset_sunrise_sensor.sunrise_display(include_extra=True, display_extra=False, include_day=False),
-            coop.sunset_sunrise_sensor.sunset_display(include_extra=True, display_extra=False, include_day=False),
+            coop.sunset_sunrise_sensor.sunrise_display(include_extra=True, display_extra=True, include_day=False),
+            coop.sunset_sunrise_sensor.sunset_display(include_extra=True, display_extra=True, include_day=False),
             coop.door.state,
             coop.door.status(),
             coop.water_level_dual_sensor.state,
@@ -116,6 +117,7 @@ def _single_relay_operated_object_set_mode(obj, mode):
     if mode not in ('auto', 'manual'):
         raise web.seeother('/')
     obj.set_state(mode)
+    obj.check()
     raise web.seeother('/')
 
 
@@ -224,5 +226,8 @@ class Reboot(AuthenticatedUser):
                          'Reboot initiated by user {username}',
                          username=username)
         )
-        call(['/usr/bin/sudo', '/sbin/shutdown', '-r', '+1'])
+        coop.stop()
+        coop.join()
+        coop.shutdown()
+        call(['/usr/bin/sudo', '/sbin/shutdown', '-r', 'now'])
         raise web.seeother('/')
