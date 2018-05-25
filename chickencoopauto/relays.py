@@ -536,11 +536,12 @@ class Door(MultiRelayOperatedObject):
             t_transitions=self.transition_transitions
         )
 
-    def open(self, event):
+    def open(self, event, from_close=False):
         switches = event.kwargs['switches']
         if switches.state == 'open':
             log.info('{} was already open'.format(self.name))
             return
+        from_invalid = switches.state == 'invalid' and event and event.transition and event.transition.source == 'auto'
         super(Door, self).turn_on(1)
         opening = switches.bottom_sensor.wait_off()
         if opening:
@@ -554,13 +555,17 @@ class Door(MultiRelayOperatedObject):
         if not opened:
             switches.top_sensor.failed_to_wait()
         if not (opening and opened):
-            self.set_manual()
             self.coop.notifier_callback(
                 Notification('ERROR',
                              '{name} failed to open{at}',
                              name=self.name,
                              at=(' at sunrise' if self.is_auto_mode() else ''))
             )
+            if from_invalid and not from_close:
+                # tried opening, didn't work, let's try closing
+                self.close(event, from_open=True)
+            else:
+                self.set_manual()
         else:
             self.coop.notifier_callback(
                 Notification('INFO',
@@ -569,11 +574,12 @@ class Door(MultiRelayOperatedObject):
                              at=(' at sunrise' if self.is_auto_mode() else ''))
             )
 
-    def close(self, event):
+    def close(self, event, from_open=False):
         switches = event.kwargs['switches']
         if switches.state == 'closed':
             log.info('{} was already closed'.format(self.name))
             return
+        from_invalid = switches.state == 'invalid' and event and event.transition and event.transition.source == 'auto'
         super(Door, self).turn_on(0)
         closing = switches.top_sensor.wait_off()
         if closing:
@@ -587,13 +593,17 @@ class Door(MultiRelayOperatedObject):
         if not closed:
             switches.bottom_sensor.failed_to_wait()
         if not (closing and closed):
-            self.set_manual()
             self.coop.notifier_callback(
                 Notification('ERROR',
                              '{name} failed to close{at}',
                              name=self.name,
                              at=(' at sunset' if self.is_auto_mode() else ''))
             )
+            if from_invalid and not from_open:
+                # tried closing, didn't work, let's try opening
+                self.open(event, from_close=True)
+            else:
+                self.set_manual()
         else:
             self.coop.notifier_callback(
                 Notification('INFO',
