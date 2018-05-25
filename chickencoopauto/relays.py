@@ -17,7 +17,7 @@ class Relay(Machine):
         self.channel = channel
         self.port = port
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(port, GPIO.OUT, initial=(initial_state == 'off'))
+        GPIO.setup(port, GPIO.OUT, initial=(initial_state == 'on'))
 
         self.transition_states = [
             'on',
@@ -50,7 +50,7 @@ class Relay(Machine):
         )
 
     def set_relay(self, event):
-        GPIO.output(self.port, self.state == 'off')
+        GPIO.output(self.port, self.state == 'on')
 
     def reset(self):
         self.set_state(self.transition_initial)

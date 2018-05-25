@@ -113,11 +113,11 @@ class CoopGetStatus(AuthenticatedUser):
         )
 
 
-def _single_relay_operated_object_set_mode(obj, mode):
+def _single_relay_operated_object_set_mode(obj, mode, **kwargs):
     if mode not in ('auto', 'manual'):
         raise web.seeother('/')
     obj.set_state(mode)
-    obj.check()
+    obj.check(**kwargs)
     raise web.seeother('/')
 
 
@@ -192,7 +192,7 @@ class DoorSetMode(AuthenticatedUser):
     def GET(self, mode):
         super(DoorSetMode, self).GET()
         coop = Coop()
-        _single_relay_operated_object_set_mode(coop.door, mode)
+        _single_relay_operated_object_set_mode(coop.door, mode, switches=coop.door_dual_sensor)
 
 
 class DoorOpenClose(AuthenticatedUser):
