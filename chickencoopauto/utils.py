@@ -1,6 +1,8 @@
 import logging
 from threading import Event, Thread
 
+from web.db import database
+
 
 log = logging.getLogger(__name__)
 
@@ -32,3 +34,12 @@ def format_temp(temp):
 
 def format_humi(humi):
     return '{:.1f} %'.format(humi) if isinstance(humi, float) else '???'
+
+
+def get_db(coop):
+    return database(
+        dbn='postgres',
+        user=coop.config['Database']['USERNAME'],
+        pw=coop.config['Database']['PASSWORD'],
+        db='coop'
+    )

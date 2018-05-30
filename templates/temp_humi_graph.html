@@ -1,0 +1,66 @@
+$def with (status, graph, range_days)
+
+$code:
+    def disabled(button_range, current_range):
+        return 'disabled' if button_range == current_range else 'enabled'
+
+    def get_status_color(status, output_string=True):
+      if status == 'ERROR':
+        return 'red' if output_string else '[1,0,0,1]'
+      elif status == 'WARN':
+        return 'blue' if output_string else '[0,0,1,1]'
+      elif status == 'OK':
+        return 'green' if output_string else '[0,1,0,1]'
+      elif status == 'MANUAL':
+        return 'yellow' if output_string else '[0.2,1,1,1]'
+
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1.0">
+    <title>${status} - Chicken Coop Controller Statistics</title>
+    <link rel="icon" type="image/png" href="/static/images/favicon.ico">
+    <link rel="stylesheet" href="/static/css/standardize.css">
+    <link rel="stylesheet" href="/static/css/temp_humi_graph-grid.css">
+    <link rel="stylesheet" href="/static/css/temp_humi_graph.css">
+    <script type="text/javascript" src="/static/js/spin.js"></script>
+    <script type="text/javascript">
+        var loading_spinner = function(link_href) {
+            var opts = {lines: 13, length: 28, width: 14, radius: 42, scale: 1, corners: 1, color: '#000000', opacity: 0.5, rotate: 0, direction: 1, speed: 1, trail: 60, fps: 20, zIndex: 2e9, className: 'spinner', top: '50%', left: '50%', shadow: false, hwaccel: false, position: 'absolute'};
+            var target = document.getElementById('loading');
+            target.setAttribute('style','width:100%;height:100%;position:absolute;top:0px;left:0px;z-index:9999;background-color:#dddddd;opacity:0.5;');
+            var spinner = new Spinner(opts).spin(target);
+            window.location.href = link_href
+        }
+    </script>
+    <style>
+        .all-content {
+            max-width: 1200px;
+            margin: auto;
+        }
+    </style>
+</head>
+<body class="body page-temp_humi_graph clearfix">
+    <div class="all-content">
+        <div id="loading"></div>
+
+        <div class="element"></div>
+        <p class="text text-1">Coop Controller Status:</p>
+        <p class="text text-2 text-${get_status_color(status)}">${status}</p>
+        <div class="wrapper">$:graph</div>
+        <button onClick="loading_spinner(this.href); window.location='?range_days=365';"
+                id="last_365"
+                class="_button _button-1" ${disabled('365', range_days)}>Last year</button>
+        <button onClick="loading_spinner(this.href); window.location='?range_days=30';"
+                id="last_30"
+                class="_button _button-2" ${disabled('30', range_days)}>Last month</button>
+        <button onClick="loading_spinner(this.href); window.location='?range_days=7';"
+                id="last_7"
+                class="_button _button-3" ${disabled('7', range_days)}>Last week</button>
+        <button onClick="loading_spinner(this.href); window.location='?range_days=1';"
+                id="last_1"
+                class="_button _button-4" ${disabled('1', range_days)}>Last day</button>
+    </div>
+</body>
+</html>

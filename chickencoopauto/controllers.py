@@ -4,12 +4,15 @@ from re import sub
 from subprocess import call
 
 from arrow import now
+from plotly.offline import plot
+from plotly.graph_objs import Data, Figure, Layout, Scatter
 from transitions.core import EventData
+from web.db import database
 import web
 
 from coop import Coop
 from notifications import Notification
-from utils import format_humi, format_temp
+from utils import format_humi, format_temp, get_db
 
 
 render = web.template.render('templates')
@@ -231,3 +234,94 @@ class Reboot(AuthenticatedUser):
         coop.shutdown()
         call(['/usr/bin/sudo', '/sbin/shutdown', '-r', 'now'])
         raise web.seeother('/')
+
+
+class TempHumiGraph(AuthenticatedUser):
+    def GET(self):
+        super(TempHumiGraph, self).GET()
+        get_data = web.input(range_days='7', action='read')
+        range_days = get_data.range_days
+        coop = Coop()
+        db = get_db(coop)
+        data = Data([
+            scatter_graph_timeseries(db, 'AMBIENT_TEMP', 'Air Temperature', 'red', range_days=range_days),
+            scatter_graph_timeseries(db, 'WATER_TEMP', 'Water Temperature', 'blue', range_days=range_days),
+            scatter_graph_timeseries(db, 'AMBIENT_HUMI', 'Humidity', 'green', width=1, yaxis2=True, range_days=range_days),
+        ])
+        min_x = min(min(data[0].x), min(data[1].x), min(data[2].x))
+        max_x = max(max(data[0].x), max(data[1].x), max(data[2].x))
+        temp_min = coop.config['Water']['HEATER_TEMP_RANGE'][1]
+        temp_max = coop.config['AmbientTempHumi']['TEMP_FAN']
+        layout = Layout(
+            title='Temperature & Humidity',
+            xaxis={
+                'title':'Date',
+            },
+            yaxis={
+                'title':'Temperature (F)',
+            },
+            yaxis2={
+                'title': 'Humidity (%)',
+                'type': 'linear',
+                'range': [0, 100],
+                'fixedrange': True,
+                'overlaying': 'y',
+                'side': 'right',
+                'showgrid': False,
+            },
+            shapes=[
+                {
+                    'type': 'line',
+                    'x0': min_x,
+                    'y0': temp_max,
+                    'x1': max_x,
+                    'y1': temp_max,
+                    'line': {
+                        'color': 'red',
+                        'width': 1,
+                        'dash': 'dot',
+                    },
+                },
+                {
+                    'type': 'line',
+                    'x0': min_x,
+                    'y0': temp_min,
+                    'x1': max_x,
+                    'y1': temp_min,
+                    'line': {
+                        'color': 'blue',
+                        'width': 1,
+                        'dash': 'dot',
+                    },
+                },
+            ]
+        )
+        figure = Figure(data=data, layout=layout)
+        graph = plot(figure, auto_open=False, output_type='div')
+
+        return render.temp_humi_graph(coop.status, graph, range_days)
+
+
+def scatter_graph_timeseries(db, log_type, name, color, width=3, yaxis2=False, range_days=7):
+    query = db.select(
+        'coop_log',
+        what='log_value, (created AT TIME ZONE \'UTC\') AT TIME ZONE \'US/Eastern\' as created_local',
+        where='log_type = \'{}\' and created > now() - interval \'{} day\''.format(log_type, range_days),
+        order='created asc'
+    )
+    x, y = zip(*[(i['created_local'], i['log_value']) for i in query])
+    return Scatter(
+        x=x,
+        y=y,
+        marker={
+            'color': color,
+            'symbol': 104,
+            'size': '10',
+        },
+        mode='lines',
+        name=name,
+        line={
+            'width': width,
+        },
+        yaxis='y2' if yaxis2 else 'y',
+    )

@@ -4,7 +4,7 @@ import signal
 import sys
 import thread
 
-import web
+from web import application
 
 from chickencoopauto.coop import Coop
 
@@ -18,6 +18,8 @@ log_filehandler.setLevel(logging.DEBUG)
 log_consolehandler = logging.StreamHandler()
 log_consolehandler.setFormatter(log_formatter)
 log_consolehandler.setLevel(logging.DEBUG)
+
+logging.getLogger('web').setLevel(logging.ERROR)
 
 log = logging.getLogger('chickencoopauto')
 log.addHandler(log_filehandler)
@@ -39,6 +41,7 @@ urls = (
     '/Heater/(on|off)', 'chickencoopauto.controllers.HeaterSetOnOff',
     '/reboot', 'chickencoopauto.controllers.Reboot',
     '/status', 'chickencoopauto.controllers.HeartbeatStatus',
+    '/TempHumiGraph', 'chickencoopauto.controllers.TempHumiGraph',
 )
 
 
@@ -54,7 +57,7 @@ if __name__ == '__main__':
     coop = Coop()
     coop.initialize_sensors_relays()
 
-    app = web.application(urls, globals())
+    app = application(urls, globals())
 
     try:
         coop.start()

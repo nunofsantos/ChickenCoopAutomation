@@ -12,15 +12,18 @@ from w1thermsensor import NoSensorFoundError, W1ThermSensor
 from transitions import Machine
 
 from notifications import Notification
+from utils import get_db
 
 
 log = logging.getLogger(__name__)
+logging.getLogger('web').setLevel(logging.ERROR)
 
 
 class Sensor(Machine):
     def __init__(self, *args, **kwargs):
         self.state = None
         self.last = None
+        self.log_type = kwargs.pop('log_type', None)
         self.name = kwargs.get('name', None)
         super(Sensor, self).__init__(*args, **kwargs)
 
@@ -33,8 +36,10 @@ class Sensor(Machine):
 
 
 class TempSensor(Sensor):
-    def __init__(self, coop, name, sensor, port, temp_range):
+    def __init__(self, coop, name, log_type, sensor, port, temp_range):
         self.name = name
+        self.log_type = log_type
+        self.last_db_log = None
         self.coop = coop
         self.temp_error_low = temp_range[0]
         self.temp_low = temp_range[1]
@@ -139,6 +144,7 @@ class TempSensor(Sensor):
         super(TempSensor, self).__init__(
             self,
             name=name,
+            log_type=log_type,
             states=self.transition_states,
             initial=self.transition_initial,
             transitions=self.transition_transitions
@@ -217,16 +223,31 @@ class TempSensor(Sensor):
         else:
             return 'OK'
 
+    def _execute_db_log(self):
+        return self.last_db_log is None or \
+               arrow.utcnow() > self.last_db_log.shift(minutes=self.coop.config['Database']['LOGGING_INTERVAL'])
+
+    def db_log_reading(self):
+        if self.log_type and self.temp and self._execute_db_log():
+            db = get_db(self.coop)
+            db.insert(
+                'coop_log',
+                log_type='{}_TEMP'.format(self.log_type),
+                log_value='{:.1f}'.format(float(self.temp))
+            )
+            self.last_db_log = arrow.utcnow()
+
 
 class AmbientTempHumiSensor(TempSensor):
-    def __init__(self, coop, name, sensor, port, temp_range, humi_range, cache_mins):
+    def __init__(self, coop, name, log_type, sensor, port, temp_range, humi_range, cache_mins):
         self.name = name
+        self.log_type = log_type
         self.humi_low = humi_range[0]
         self.humi_high = humi_range[1]
         self.humi = None
         self.cache_mins = cache_mins
 
-        super(AmbientTempHumiSensor, self).__init__(coop, name, sensor, port, temp_range)
+        super(AmbientTempHumiSensor, self).__init__(coop, name, log_type, sensor, port, temp_range)
         self.last = arrow.utcnow()
 
     def read_sensor(self):
@@ -254,11 +275,33 @@ class AmbientTempHumiSensor(TempSensor):
         elif self.humi:
             log.debug('Last ambient humidity: {:.1f}%'.format(float(self.humi)))
 
+        self.db_log_reading()
         return self.temp
+
+    def db_log_reading(self):
+        if self.log_type and (self.temp or self.humi) and self._execute_db_log():
+            values = []
+            if self.temp:
+                values.append(
+                    {
+                        'log_type': '{}_TEMP'.format(self.log_type),
+                        'log_value': '{:.1f}'.format(float(self.temp)),
+                    }
+                )
+            if self.humi:
+                values.append(
+                    {
+                        'log_type': '{}_HUMI'.format(self.log_type),
+                        'log_value': '{:.1f}'.format(float(self.humi)),
+                    }
+                )
+            db = get_db(self.coop)
+            db.multiple_insert('coop_log', values)
+            self.last_db_log = arrow.utcnow()
 
 
 class WaterTempSensor(TempSensor):
-    def __init__(self, coop, name, temp_range):
+    def __init__(self, coop, name, log_type, temp_range):
         try:
             w1_sensor = W1ThermSensor()
         except NoSensorFoundError:
@@ -268,6 +311,7 @@ class WaterTempSensor(TempSensor):
         super(WaterTempSensor, self).__init__(
             coop,
             name,
+            log_type,
             w1_sensor,
             4,  # must go in GPIO4 !!!
             temp_range
@@ -278,6 +322,7 @@ class WaterTempSensor(TempSensor):
             self.temp = self.sensor.get_temperature(W1ThermSensor.DEGREES_F)
             self.last = arrow.utcnow()
             log.info('Water temp: {:.1f}'.format(float(self.temp)))
+            self.db_log_reading()
             return self.temp
 
     def notify_temp_high(self):

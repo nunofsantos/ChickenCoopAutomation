@@ -43,6 +43,10 @@ SENSOR_TIMEOUT = 10000
 EXTRA_MIN_SUNRISE = 0
 EXTRA_MIN_SUNSET = 0
 
+[Other]
+UNUSED_PORT_1 = 23
+UNUSED_PORT_2 = 24
+
 [Notifications]
 LOG = True
 LOG_THRESHOLD = INFO
@@ -58,3 +62,8 @@ SMS_TO = number@verizontext.com
 [Authentication]
 USERNAME = username
 PASSWORD = password
+
+[Database]
+USERNAME = username
+PASSWORD = password
+LOGGING_INTERVAL = 30

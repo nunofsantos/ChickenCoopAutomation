@@ -111,6 +111,12 @@ class Coop(StoppableThread, Singleton):
             'SMS_TO': parser.get('Notifications', 'SMS_TO'),
         }
 
+        database_options = {
+            'USERNAME': parser.get('Database', 'USERNAME'),
+            'PASSWORD': parser.get('Database', 'PASSWORD'),
+            'LOGGING_INTERVAL': parser.getint('Database', 'LOGGING_INTERVAL'),
+        }
+
         config = {
             'Authentication': authentication_options,
             'Main': main_options,
@@ -121,6 +127,7 @@ class Coop(StoppableThread, Singleton):
             'Door': door_options,
             'Other': other_options,
             'Notifications': notifications_options,
+            'Database': database_options,
         }
 
         return config
@@ -138,6 +145,7 @@ class Coop(StoppableThread, Singleton):
         self.ambient_temp_humi_sensor = sensors.AmbientTempHumiSensor(
             self,
             'Ambient Temp/Humi Sensor',
+            'AMBIENT',
             DHT.DHT22,
             self.config['AmbientTempHumi']['SENSOR_PORT'],
             self.config['AmbientTempHumi']['TEMP_RANGE'],
@@ -175,6 +183,7 @@ class Coop(StoppableThread, Singleton):
         self.water_temp_sensor = sensors.WaterTempSensor(
             self,
             'Water Temp Sensor',
+            'WATER',
             self.config['Water']['HEATER_TEMP_RANGE'],
         )
 
@@ -260,7 +269,6 @@ class Coop(StoppableThread, Singleton):
         for relay in self.relay_module.values():
             relay.reset()
         self.status_led.reset()
-        # GPIO.cleanup()
         log.warn('Shutdown')
 
     @staticmethod

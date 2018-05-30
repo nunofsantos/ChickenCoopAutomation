@@ -142,9 +142,11 @@ $code:
     <div id="ambient-container"
          class="container container-ambient container-${get_status_color(ambient_temp_status)}">
     </div>
+    <a href="/TempHumiGraph" target="_blank">
     <div id="ambient-icon"
          class="element element-ambient-temp-icon ambient-temp-icon-${get_low_high(ambient_temp_state)}">
     </div>
+    </a>
     <p class="text text-13">Temp:</p>
     <p id="ambient-temp" class="text text-14">$ambient_temp</p>
     <p class="text text-15">Humidity:</p>
@@ -154,8 +156,11 @@ $code:
     <div id="water-temp-container"
          class="container container-water-temp container-${get_status_color(water_temp_status)}">
     </div>
+    <a href="/TempHumiGraph" target="_blank">
     <div id="water-temp-icon"
-         class="element element-water-temp water-temp-icon-${get_low_high(water_temp_state)}"></div>
+         class="element element-water-temp water-temp-icon-${get_low_high(water_temp_state)}">
+    </div>
+    </a>
     <p class="text text-17">Water Temp:</p>
     <p id="water-temp" class="text text-18">$water_temp</p>
 
