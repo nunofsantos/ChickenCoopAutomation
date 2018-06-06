@@ -117,6 +117,10 @@ class Coop(StoppableThread, Singleton):
             'LOGGING_INTERVAL': parser.getint('Database', 'LOGGING_INTERVAL'),
         }
 
+        webcam_options = {
+            'URL': parser.get('Webcam', 'URL'),
+        }
+
         config = {
             'Authentication': authentication_options,
             'Main': main_options,
@@ -128,6 +132,7 @@ class Coop(StoppableThread, Singleton):
             'Other': other_options,
             'Notifications': notifications_options,
             'Database': database_options,
+            'Webcam': webcam_options,
         }
 
         return config

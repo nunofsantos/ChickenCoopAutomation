@@ -67,3 +67,7 @@ PASSWORD = password
 USERNAME = username
 PASSWORD = password
 LOGGING_INTERVAL = 30
+
+
+[Webcam]
+URL = http://mycam.streams.here

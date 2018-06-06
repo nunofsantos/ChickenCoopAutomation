@@ -1,4 +1,4 @@
-$def with (status, graph, range_days)
+$def with (status, graph, range_days, webcam_url)
 
 $code:
     def disabled(button_range, current_range):
@@ -45,7 +45,7 @@ $code:
     <div class="all-content">
         <div id="loading"></div>
 
-        <div class="element"></div>
+        <a href="${webcam_url}" target="_blank"><div class="element"></div></a>
         <p class="text text-1">Coop Controller Status:</p>
         <p class="text text-2 text-${get_status_color(status)}">${status}</p>
         <div class="wrapper">$:graph</div>

@@ -1,4 +1,4 @@
-$def with (status, rebooting, time, day_night, day_night_status, sunrise, sunset, ambient_temp_state, ambient_temp_status, ambient_temp, ambient_humi, water_temp, water_temp_state, water_temp_status, water_heater_temp_on, water_heater_temp_off, water_heater_mode, water_heater_status, water_heater, door_switches, door_open_time, door_close_time, door, door_status, water_level, water_level_status, light,light_status, fan_temp_off, fan_temp_on, fan, fan_status, heater_temp_on, heater_temp_off, heater_mode, heater_status, heater)
+$def with (status, rebooting, time, day_night, day_night_status, sunrise, sunset, ambient_temp_state, ambient_temp_status, ambient_temp, ambient_humi, water_temp, water_temp_state, water_temp_status, water_heater_temp_on, water_heater_temp_off, water_heater_mode, water_heater_status, water_heater, door_switches, door_open_time, door_close_time, door, door_status, water_level, water_level_status, light,light_status, fan_temp_off, fan_temp_on, fan, fan_status, heater_temp_on, heater_temp_off, heater_mode, heater_status, heater, webcam_url)
 
 $code:
     def get_full_status(status, rebooting):
@@ -96,7 +96,7 @@ $code:
     <div id="loading"></div>
 
     <!-- title -->
-    <div class="element element-1"></div>
+    <a href="${webcam_url}" target="_blank"><div class="element element-1"></div></a>
     <p class="text text-1">Coop Controller Status:</p>
     <p class="text text-2 text-${get_status_color(status)}">
         ${get_full_status(status, rebooting)}

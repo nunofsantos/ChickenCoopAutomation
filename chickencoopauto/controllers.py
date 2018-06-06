@@ -7,7 +7,6 @@ from arrow import now
 from plotly.offline import plot
 from plotly.graph_objs import Data, Figure, Layout, Scatter
 from transitions.core import EventData
-from web.db import database
 import web
 
 from coop import Coop
@@ -113,6 +112,7 @@ class CoopGetStatus(AuthenticatedUser):
             coop.heater.state,
             coop.heater.status(),
             coop.heater_relay.state,
+            coop.config['Webcam']['URL'],
         )
 
 
@@ -254,6 +254,7 @@ class TempHumiGraph(AuthenticatedUser):
         temp_max = coop.config['AmbientTempHumi']['TEMP_FAN']
         layout = Layout(
             title='Temperature & Humidity',
+            height=600,
             xaxis={
                 'title':'Date',
             },
@@ -299,7 +300,12 @@ class TempHumiGraph(AuthenticatedUser):
         figure = Figure(data=data, layout=layout)
         graph = plot(figure, auto_open=False, output_type='div')
 
-        return render.temp_humi_graph(coop.status, graph, range_days)
+        return render.temp_humi_graph(
+            coop.status,
+            graph,
+            range_days,
+            coop.config['Webcam']['URL'],
+        )
 
 
 def scatter_graph_timeseries(db, log_type, name, color, width=3, yaxis2=False, range_days=7):
