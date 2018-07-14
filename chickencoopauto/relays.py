@@ -541,9 +541,9 @@ class Door(MultiRelayOperatedObject):
         if switches.state == 'open':
             log.info('{} was already open'.format(self.name))
             return
-        super(Door, self).turn_on(1)
+        self.turn_on(1)
         opened = switches.top_sensor.wait_on()
-        super(Door, self).turn_off(1)
+        self.turn_off(1)
         if not opened:
             switches.top_sensor.failed_to_wait()
             self.coop.notifier_callback(
@@ -566,11 +566,11 @@ class Door(MultiRelayOperatedObject):
         if switches.state == 'closed':
             log.info('{} was already closed'.format(self.name))
             return
-        super(Door, self).turn_on(0)
+        self.turn_on(0)
         closed = switches.bottom_sensor.wait_on()
         # delay to compensate for switches sometimes trigerring too soon
         sleep(0.1)
-        super(Door, self).turn_off(0)
+        self.turn_off(0)
         if not closed:
             switches.bottom_sensor.failed_to_wait()
             self.coop.notifier_callback(
@@ -607,21 +607,21 @@ class Door(MultiRelayOperatedObject):
         return self.coop.door_dual_sensor.is_closed()
 
     def notify_manual_open(self, event):
-        sunrise_sunset = event.kwargs['sunrise_sunset']
+        sunrise_sunset = event.kwargs.get('sunrise_sunset')
         self.coop.notifier_callback(
             Notification('WARN',
                          '{name} is in manual mode and is open{at}!',
                          name=self.name,
-                         at=(' during the night' if sunrise_sunset.is_night() else ''))
+                         at=(' during the night' if sunrise_sunset and sunrise_sunset.is_night() else ''))
         )
 
     def notify_manual_close(self, event):
-        sunrise_sunset = event.kwargs['sunrise_sunset']
+        sunrise_sunset = event.kwargs.get('sunrise_sunset')
         self.coop.notifier_callback(
             Notification('WARN',
                          '{name} is in manual mode and is closed{at}!',
                          name=self.name,
-                         at=(' during the day' if sunrise_sunset.is_day() else ''))
+                         at=(' during the day' if sunrise_sunset and sunrise_sunset.is_day() else ''))
         )
 
     def notify_manual_invalid(self, event):

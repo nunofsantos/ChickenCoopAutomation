@@ -252,7 +252,7 @@ class AmbientTempHumiSensor(TempSensor):
 
     def read_sensor(self):
         now = arrow.utcnow()
-        humi, temp = DHT.read_retry(self.sensor, self.port, retries=3, delay_seconds=5)
+        humi, temp = DHT.read_retry(self.sensor, self.port, retries=2, delay_seconds=10)
 
         if temp:
             self.temp = float(temp) * 1.8 + 32.0
@@ -426,9 +426,9 @@ class SwitchSensor(Sensor):
         return self._wait(detect=GPIO.FALLING)
 
     def _wait(self, detect=GPIO.RISING):
-        if (self.is_closed() and detect == GPIO.RISING) or \
-           (self.is_open() and detect == GPIO.FALLING):
-            return True
+        # if (self.is_closed() and detect == GPIO.RISING) or \
+        #    (self.is_open() and detect == GPIO.FALLING):
+        #     return True
         log.debug('Waiting...')
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.port, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
@@ -753,9 +753,10 @@ class SunriseSunsetSensor(Sensor):
 
         if self.last is None or now.to('US/Eastern').day > self.sunset.to('US/Eastern').day:
             try:
-                url = 'https://api.sunrise-sunset.org/json?lat={lat}&lng={lon}&date=today&formatted=0'.format(
+                url = 'https://api.sunrise-sunset.org/json?lat={lat}&lng={lon}&date={today}&formatted=0'.format(
                     lat=self.lat,
-                    lon=self.lon
+                    lon=self.lon,
+                    today=now.to('US/Eastern').format('YYYY-MM-DD'),
                 )
                 response = requests.get(url)
                 response.raise_for_status()
